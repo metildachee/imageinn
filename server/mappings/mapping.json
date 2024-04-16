@@ -1,0 +1,55 @@
+PUT /images
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 1
+  },
+  "mappings": {
+    "properties": {
+      "url": {
+        "type": "keyword"
+      },
+      "category_ids": {
+        "type": "integer"
+      },
+      "id": {
+        "type": "keyword"
+      },
+      "caption": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      }
+    }
+  }
+}
+
+POST /images/_doc/1
+{
+  "url": "http://example.com",
+  "category_ids": [100, 101],
+  "id": "1",
+  "caption": "An example caption for the document."
+}
+
+GET /images/_search
+{
+  "query": {
+    "term": {
+      "category_ids": 100
+    }
+  }
+}
+
+GET /images/_search
+{
+  "query": {
+    "match": {
+      "caption": "example"
+    }
+  }
+}
