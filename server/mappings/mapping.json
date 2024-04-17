@@ -1,4 +1,3 @@
-PUT /images
 {
   "settings": {
     "number_of_shards": 1,
@@ -24,32 +23,6 @@ PUT /images
           }
         }
       }
-    }
-  }
-}
-
-POST /images/_doc/1
-{
-  "url": "http://example.com",
-  "category_ids": [100, 101],
-  "id": "1",
-  "caption": "An example caption for the document."
-}
-
-GET /images/_search
-{
-  "query": {
-    "term": {
-      "category_ids": 100
-    }
-  }
-}
-
-GET /images/_search
-{
-  "query": {
-    "match": {
-      "caption": "example"
     }
   }
 }

@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"context"
@@ -7,6 +7,98 @@ import (
 	"github.com/olivere/elastic/v7" // imports as package "elastic"
 	"log"
 )
+
+type DocumentStructure struct {
+	URL         string  `json:"url"`
+	Caption     string  `json:"caption"`
+	ID          string  `json:"id"`
+	CategoryIDs []int64 `json:"category_ids"`
+}
+
+func unmarshalResults(hits []*elastic.SearchHit) ([]DocumentStructure, error) {
+	documents := make([]DocumentStructure, 0)
+
+	for _, hit := range hits {
+		doc := DocumentStructure{}
+		if unmarshalErr := json.Unmarshal(hit.Source, &doc); unmarshalErr != nil {
+			return nil, unmarshalErr
+		}
+		documents = append(documents, doc)
+		log.Printf("document by URL: %s, Caption: %s\n", doc.URL, doc.Caption)
+	}
+
+	return documents, nil
+}
+
+func SearchByCategoryID(ctx context.Context, client *elastic.Client, categoryID int64) ([]DocumentStructure, int64, error) {
+	termQuery := elastic.NewTermQuery("category_ids", categoryID)
+	searchResult, err := client.Search().
+		Index("images").
+		Query(termQuery).
+		Sort("id", true).
+		From(0).Size(10).
+		Pretty(true).
+		Do(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	totalHits := searchResult.TotalHits()
+
+	hits, unmarshalErr := unmarshalResults(searchResult.Hits.Hits)
+	return hits, totalHits, unmarshalErr
+}
+
+func SearchByCategoryIDs(ctx context.Context, client *elastic.Client, categoryIDs []int64) ([]DocumentStructure, int64, error) {
+	andCategoryQuery := elastic.NewBoolQuery()
+	for _, category := range categoryIDs {
+		andCategoryQuery.Must(elastic.NewTermQuery("category_ids", category))
+	}
+
+	//orCategoryQuery := elastic.NewBoolQuery()
+	//for _, category := range categoryIDs {
+	//	orCategoryQuery.Should(elastic.NewTermQuery("categories", category))
+	//}
+
+	searchResult, err := client.Search().
+		Index("images").
+		Query(andCategoryQuery).
+		Size(10).
+		Do(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	totalHits := searchResult.TotalHits()
+
+	hits, unmarshalErr := unmarshalResults(searchResult.Hits.Hits)
+	return hits, totalHits, unmarshalErr
+}
+
+func SearchByKeyword(ctx context.Context, client *elastic.Client, keywords []string) ([]DocumentStructure, int64, error) {
+	andQuery := elastic.NewBoolQuery()
+	for _, keyword := range keywords {
+		andQuery.Must(elastic.NewMatchQuery("caption", keyword))
+	}
+
+	//orQuery := elastic.NewBoolQuery()
+	//for _, keyword := range keywords {
+	//	orQuery.Should(elastic.NewMatchQuery("caption", keyword))
+	//}
+
+	searchResult, err := client.Search().
+		Index("images").
+		Query(andQuery).
+		Size(10).
+		Do(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	totalHits := searchResult.TotalHits()
+
+	hits, unmarshalErr := unmarshalResults(searchResult.Hits.Hits)
+	return hits, totalHits, unmarshalErr
+}
 
 func main() {
 	// Create a client and connect to http://127.0.0.1:9200
@@ -20,18 +112,16 @@ func main() {
 		log.Fatalf("Error creating the client: %s", err)
 	}
 
-	// Use a context to manage cancellation
 	ctx := context.Background()
 
-	// Perform a search for a specific URL in the "my_index" index
 	termQuery := elastic.NewTermQuery("category_ids", 100)
 	searchResult, err := client.Search().
-		Index("images").  // search in index "my_index
-		Query(termQuery). // specify the query
-		Sort("id", true). // sort by "id" field, ascending
-		From(0).Size(10). // take documents 0-9
-		Pretty(true).     // pretty print request and response JSON
-		Do(ctx)           // execute
+		Index("images").
+		Query(termQuery).
+		Sort("id", true).
+		From(0).Size(10).
+		Pretty(true).
+		Do(ctx)
 	if err != nil {
 		log.Fatalf("Error getting response: %s", err)
 	}
