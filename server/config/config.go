@@ -8,7 +8,10 @@ import (
 
 type Config struct {
 	Elasticsearch struct {
-		Index string `yaml:"index"`
+		Index       string `yaml:"index"`
+		Url         string `yaml:"url"`
+		Sniff       bool   `yaml:"sniff"`
+		HealthCheck bool   `yaml:"health-check"`
 	} `yaml:"elasticsearch"`
 }
 

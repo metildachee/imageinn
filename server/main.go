@@ -1,11 +1,16 @@
-package server
+package main
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
+	config "github.com/metildachee/imageinn/server/config"
+	"github.com/metildachee/imageinn/server/utils"
 	"github.com/olivere/elastic/v7" // imports as package "elastic"
 	"log"
+	"net/http"
+	"strings"
 )
 
 type DocumentStructure struct {
@@ -13,6 +18,25 @@ type DocumentStructure struct {
 	Caption     string  `json:"caption"`
 	ID          string  `json:"id"`
 	CategoryIDs []int64 `json:"category_ids"`
+}
+
+type SearchRequest struct {
+	from        int64
+	to          int64
+	keywords    []string
+	categoryIDs []int64
+	imageID     int64
+	requestID   string
+}
+
+type SearchResponse struct {
+	Images     []DocumentStructure `json:"images"`
+	TotalCount int64               `json:"total_count"`
+}
+
+type Searcher struct {
+	client *elastic.Client
+	index  string
 }
 
 func unmarshalResults(hits []*elastic.SearchHit) ([]DocumentStructure, error) {
@@ -30,118 +54,206 @@ func unmarshalResults(hits []*elastic.SearchHit) ([]DocumentStructure, error) {
 	return documents, nil
 }
 
-func SearchByCategoryID(ctx context.Context, client *elastic.Client, categoryID int64) ([]DocumentStructure, int64, error) {
-	termQuery := elastic.NewTermQuery("category_ids", categoryID)
-	searchResult, err := client.Search().
-		Index("images").
-		Query(termQuery).
-		Sort("id", true).
+func NewSearcher(config config.Config) (*Searcher, error) {
+	client, err := elastic.NewClient(
+		elastic.SetURL(config.Elasticsearch.Url),
+		elastic.SetSniff(config.Elasticsearch.Sniff),
+		elastic.SetHealthcheck(config.Elasticsearch.HealthCheck),
+		//elastic.SetBasicAuth("elastic", "rTur2xp5QmFAvEAPJjfT"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Searcher{
+		client: client,
+		index:  config.Elasticsearch.Index,
+	}, nil
+}
+
+type WebHandler struct {
+	searcher *Searcher
+}
+
+func NewWebHandler(searcher *Searcher) *WebHandler {
+	return &WebHandler{searcher: searcher}
+}
+
+func (s *Searcher) doSearch(ctx context.Context, query elastic.Query) ([]DocumentStructure, int64, error) {
+	searchResult, err := s.client.Search().
+		Index(s.index).
+		Query(query).
 		From(0).Size(10).
-		Pretty(true).
 		Do(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
+	src, _ := query.Source()
+	log.Println("source", src)
 
 	totalHits := searchResult.TotalHits()
-
 	hits, unmarshalErr := unmarshalResults(searchResult.Hits.Hits)
+	log.Println("hits", hits)
 	return hits, totalHits, unmarshalErr
 }
 
-func SearchByCategoryIDs(ctx context.Context, client *elastic.Client, categoryIDs []int64) ([]DocumentStructure, int64, error) {
+func (s *Searcher) SearchByCategoryID(ctx context.Context, categoryID int64) ([]DocumentStructure, int64, error) {
+	termQuery := elastic.NewTermQuery("category_ids", categoryID)
+	return s.doSearch(ctx, termQuery)
+}
+
+func (s *Searcher) SearchByCategoryIDsAndOr(ctx context.Context, categoryIDs []int64) ([]DocumentStructure, int64, error) {
 	andCategoryQuery := elastic.NewBoolQuery()
 	for _, category := range categoryIDs {
 		andCategoryQuery.Must(elastic.NewTermQuery("category_ids", category))
 	}
-
-	//orCategoryQuery := elastic.NewBoolQuery()
-	//for _, category := range categoryIDs {
-	//	orCategoryQuery.Should(elastic.NewTermQuery("categories", category))
-	//}
-
-	searchResult, err := client.Search().
-		Index("images").
-		Query(andCategoryQuery).
-		Size(10).
-		Do(ctx)
-	if err != nil {
-		return nil, 0, err
+	orCategoryQuery := elastic.NewBoolQuery()
+	for _, category := range categoryIDs {
+		orCategoryQuery.Should(elastic.NewTermQuery("category_ids", category))
 	}
-	totalHits := searchResult.TotalHits()
-
-	hits, unmarshalErr := unmarshalResults(searchResult.Hits.Hits)
-	return hits, totalHits, unmarshalErr
+	query := elastic.NewBoolQuery().Should(andCategoryQuery, orCategoryQuery)
+	return s.doSearch(ctx, query)
 }
 
-func SearchByKeyword(ctx context.Context, client *elastic.Client, keywords []string) ([]DocumentStructure, int64, error) {
+func (s *Searcher) SearchByKeywordsAndOr(ctx context.Context, keywords []string) ([]DocumentStructure, int64, error) {
 	andQuery := elastic.NewBoolQuery()
 	for _, keyword := range keywords {
 		andQuery.Must(elastic.NewMatchQuery("caption", keyword))
 	}
+	orQuery := elastic.NewBoolQuery()
+	for _, keyword := range keywords {
+		orQuery.Should(elastic.NewMatchQuery("caption", keyword))
+	}
+	query := elastic.NewBoolQuery().Should(andQuery, orQuery)
 
-	//orQuery := elastic.NewBoolQuery()
-	//for _, keyword := range keywords {
-	//	orQuery.Should(elastic.NewMatchQuery("caption", keyword))
-	//}
+	return s.doSearch(ctx, query)
+}
 
-	searchResult, err := client.Search().
-		Index("images").
-		Query(andQuery).
-		Size(10).
-		Do(ctx)
-	if err != nil {
-		return nil, 0, err
+func (s *Searcher) SearchByKeywordsAndCategoryIDsStrictAnd(ctx context.Context, categoryIDs []int64, keywords []string) ([]DocumentStructure, int64, error) {
+	// All AND logic
+	categoryQuery := elastic.NewBoolQuery()
+	for _, category := range categoryIDs {
+		categoryQuery.Must(elastic.NewTermQuery("category_ids", category))
+	}
+	keywordQuery := elastic.NewBoolQuery()
+	for _, keyword := range keywords {
+		keywordQuery.Must(elastic.NewMatchQuery("caption", keyword))
+	}
+	combinedQuery := elastic.NewBoolQuery().Must(categoryQuery, keywordQuery)
+
+	return s.doSearch(ctx, combinedQuery)
+}
+
+func validateAndProcessRequest(ctx context.Context, r *http.Request) (*SearchRequest, error) {
+	queryParameters := r.URL.Query()
+	keywordInputs := queryParameters.Get("q")
+	categoryInputs := queryParameters.Get("category_ids")
+	imageIDInput := queryParameters.Get("id")
+
+	keywordInputsTrimmed := strings.Trim(keywordInputs, "")
+	categoryInputsTrimmed := strings.Trim(categoryInputs, "")
+	imageIDInputsTrimmed := strings.Trim(imageIDInput, "")
+
+	if keywordInputsTrimmed == "" && categoryInputsTrimmed == "" && imageIDInputsTrimmed == "" {
+		return nil, fmt.Errorf("empty request")
 	}
 
-	totalHits := searchResult.TotalHits()
+	searchRequest := &SearchRequest{}
 
-	hits, unmarshalErr := unmarshalResults(searchResult.Hits.Hits)
-	return hits, totalHits, unmarshalErr
+	var keywords []string
+	if keywordInputsTrimmed != "" {
+		keywords = strings.Split(keywordInputs, " ")
+		searchRequest.keywords = keywords
+	}
+
+	if categoryInputsTrimmed != "" {
+		categories, err := utils.StringToInt64Array(categoryInputs)
+		if err != nil {
+			return nil, err
+		}
+		searchRequest.categoryIDs = categories
+	}
+
+	if imageIDInputsTrimmed != "" {
+		imageID, err := utils.StrToInt64(imageIDInput)
+		if err != nil {
+			return nil, err
+		}
+		searchRequest.imageID = imageID
+	}
+
+	if searchRequest.imageID != 0 && (len(searchRequest.categoryIDs) > 0 || len(searchRequest.keywords) > 0) {
+		return nil, fmt.Errorf("image ID should be independent results but got keywords || categories")
+	}
+
+	return searchRequest, nil
+}
+
+func (h *WebHandler) searchHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+
+	searchReq, err := validateAndProcessRequest(ctx, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	var (
+		searchResults []DocumentStructure
+		count         int64
+	)
+	if len(searchReq.keywords) != 0 && len(searchReq.categoryIDs) == 0 && searchReq.imageID == 0 { // keyword search
+		searchResults, count, err = h.searcher.SearchByKeywordsAndOr(ctx, searchReq.keywords)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+
+	if len(searchReq.keywords) == 0 && len(searchReq.categoryIDs) != 0 && searchReq.imageID == 0 { // category search
+		searchResults, count, err = h.searcher.SearchByCategoryIDsAndOr(ctx, searchReq.categoryIDs)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+
+	// document search
+
+	if len(searchReq.keywords) != 0 && len(searchReq.categoryIDs) != 0 && searchReq.imageID == 0 { // keyword and category search
+		searchResults, count, err = h.searcher.SearchByKeywordsAndCategoryIDsStrictAnd(ctx, searchReq.categoryIDs, searchReq.keywords)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+
+	searchResp := &SearchResponse{
+		Images:     searchResults,
+		TotalCount: count,
+	}
+
+	jsonResponse, err := json.Marshal(searchResp)
+	if err != nil {
+		http.Error(w, "failed to serialize search results", http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("request", searchReq, "response", searchResp)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
 }
 
 func main() {
-	// Create a client and connect to http://127.0.0.1:9200
-	client, err := elastic.NewClient(
-		elastic.SetURL("http://localhost:9200"),
-		elastic.SetSniff(false),
-		elastic.SetHealthcheck(false),
-		elastic.SetBasicAuth("elastic", "rTur2xp5QmFAvEAPJjfT"),
-	)
+	configPath := "config/config.yml" // change into flag
+	serverConfig := config.LoadConfig(configPath)
+	searcher, err := NewSearcher(*serverConfig)
 	if err != nil {
-		log.Fatalf("Error creating the client: %s", err)
+		log.Fatalln("load searcher failed", err)
 	}
+	webHandler := NewWebHandler(searcher)
 
-	ctx := context.Background()
+	r := mux.NewRouter()
+	r.HandleFunc("/search", webHandler.searchHandler).Methods("GET")
 
-	termQuery := elastic.NewTermQuery("category_ids", 100)
-	searchResult, err := client.Search().
-		Index("images").
-		Query(termQuery).
-		Sort("id", true).
-		From(0).Size(10).
-		Pretty(true).
-		Do(ctx)
-	if err != nil {
-		log.Fatalf("Error getting response: %s", err)
-	}
-
-	fmt.Printf("Query took %d milliseconds\n", searchResult.TookInMillis)
-	fmt.Printf("Found a total of %d documents\n", searchResult.TotalHits())
-
-	// Iterate through results
-	for _, hit := range searchResult.Hits.Hits {
-		// Deserialize hit.Source into a Document (could also be just a map[string]interface{}).
-		var t struct {
-			URL     string `json:"url"`
-			Caption string `json:"caption"`
-		}
-		err := json.Unmarshal(hit.Source, &t)
-		if err != nil {
-			// Deserialization failed
-			log.Fatalf("Deserialization failed: %s", err)
-		}
-
-		fmt.Printf("Document by URL: %s, Caption: %s\n", t.URL, t.Caption)
+	log.Println("Starting server on :8080")
+	if err := http.ListenAndServe(":8080", r); err != nil {
+		log.Fatal(err)
 	}
 }

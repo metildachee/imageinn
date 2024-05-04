@@ -1,74 +1,137 @@
-package server
+package main
 
 import (
 	"context"
 	"fmt"
-	"github.com/olivere/elastic/v7"
+	config2 "github.com/metildachee/imageinn/server/config"
 	"testing"
 )
 
-func Test_SearchByKeyword(t *testing.T) {
-	client, err := elastic.NewClient(
-		elastic.SetURL("http://localhost:9200"),
-		elastic.SetSniff(false),
-		elastic.SetHealthcheck(false),
-	)
+func getTestElasticClient(t *testing.T) *Searcher {
+	conf := config2.LoadConfig("config/config.yml")
+	searcher, err := NewSearcher(*conf)
 	if err != nil {
 		t.FailNow()
 	}
+	return searcher
+}
+
+func Test_SearchByKeyword_OneHit(t *testing.T) {
+	funcName := "Test_SearchByKeyword_OneHit"
 
 	ctx := context.Background()
 	keywords := []string{"example"}
+	searcher := getTestElasticClient(t)
 
-	results, totalHits, err := SearchByKeyword(ctx, client, keywords)
+	results, totalHits, err := searcher.SearchByKeywordsAndOr(ctx, keywords)
 	if err != nil {
 		fmt.Println("got error", err)
 		t.FailNow()
 	}
 
-	fmt.Println("len(results)", totalHits)
+	fmt.Println(funcName, "len(results)", totalHits)
 	fmt.Println(results)
 }
 
-func Test_SearchByCategory(t *testing.T) {
-	client, err := elastic.NewClient(
-		elastic.SetURL("http://localhost:9200"),
-		elastic.SetSniff(false),
-		elastic.SetHealthcheck(false),
-	)
-	if err != nil {
-		t.FailNow()
-	}
+func Test_SearchByKeyword_PartialKeywordHit(t *testing.T) {
+	funcName := "Test_SearchByKeyword_PartialKeywordHit"
 
 	ctx := context.Background()
-	results, totalHits, err := SearchByCategoryID(ctx, client, 100)
+	keywords := []string{"example", "apple"}
+	searcher := getTestElasticClient(t)
+
+	results, totalHits, err := searcher.SearchByKeywordsAndOr(ctx, keywords)
 	if err != nil {
 		fmt.Println("got error", err)
 		t.FailNow()
 	}
 
-	fmt.Println("len(results)", totalHits)
+	fmt.Println(funcName, "len(results)", totalHits)
+	fmt.Println(results)
+}
+
+func Test_SearchByKeyword_NilHit(t *testing.T) {
+	funcName := "Test_SearchByKeyword_NilHit"
+
+	ctx := context.Background()
+	keywords := []string{"apple"}
+	searcher := getTestElasticClient(t)
+
+	results, totalHits, err := searcher.SearchByKeywordsAndOr(ctx, keywords)
+	if err != nil {
+		fmt.Println("got error", err)
+		t.FailNow()
+	}
+
+	if totalHits != 0 {
+		t.FailNow()
+	}
+
+	fmt.Println(funcName, "len(results)", totalHits)
+	fmt.Println(results)
+}
+
+func Test_SearchByOneCategory(t *testing.T) {
+	funcName := "Test_SearchByCategory"
+	searcher := getTestElasticClient(t)
+
+	ctx := context.Background()
+	results, totalHits, err := searcher.SearchByCategoryID(ctx, 100)
+	if err != nil {
+		fmt.Println("got error", err)
+		t.FailNow()
+	}
+
+	fmt.Println(funcName, "len(results)", totalHits)
+	fmt.Println(results)
+}
+
+func Test_SearchByPartialCategory(t *testing.T) {
+	funcName := "Test_SearchByPartialCategory"
+	searcher := getTestElasticClient(t)
+
+	ctx := context.Background()
+	categories := []int64{100, 88}
+
+	results, totalHits, err := searcher.SearchByCategoryIDsAndOr(ctx, categories)
+	if err != nil {
+		fmt.Println("got error", err)
+		t.FailNow()
+	}
+
+	fmt.Println(funcName, "len(results)", totalHits)
+	fmt.Println(results)
+}
+
+func Test_SearchByAllCategory(t *testing.T) {
+	funcName := "Test_SearchByAllCategory"
+	searcher := getTestElasticClient(t)
+
+	ctx := context.Background()
+	categories := []int64{100, 101}
+
+	results, totalHits, err := searcher.SearchByCategoryIDsAndOr(ctx, categories)
+	if err != nil {
+		fmt.Println("got error", err)
+		t.FailNow()
+	}
+
+	fmt.Println(funcName, "len(results)", totalHits)
 	fmt.Println(results)
 }
 
 func Test_SearchByCategories(t *testing.T) {
-	client, err := elastic.NewClient(
-		elastic.SetURL("http://localhost:9200"),
-		elastic.SetSniff(false),
-		elastic.SetHealthcheck(false),
-	)
-	if err != nil {
-		t.FailNow()
-	}
+	funcName := "Test_SearchByCategories"
+	searcher := getTestElasticClient(t)
 
 	ctx := context.Background()
 	categoryIDs := []int64{100, 101}
-	results, totalHits, err := SearchByCategoryIDs(ctx, client, categoryIDs)
+	results, totalHits, err := searcher.SearchByCategoryIDsAndOr(ctx, categoryIDs)
 	if err != nil {
 		fmt.Println("got error", err)
 		t.FailNow()
 	}
 
-	fmt.Println("len(results)", totalHits)
+	fmt.Println(funcName, "len(results)", totalHits)
 	fmt.Println(results)
 }

@@ -1,2 +1,5 @@
 elasticsearch:
   index: "images"
+  url: "http://localhost:9200"
+  sniff: false
+  health-check: false
