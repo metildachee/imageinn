@@ -1,4 +1,5 @@
 ```bash
-python3 script.py
-curl -H "Content-Type: application/x-ndjson" -XPOST "localhost:9200/_bulk" --data-binary "@pinterest_es.json"
+python3 prepare-bulk-data.py
+python3 split-bulk-es.py
+./insert-bulk-data.sh
 ```
