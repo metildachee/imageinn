@@ -40,17 +40,15 @@ func NewSearcher(config config.Config) (*Searcher, error) {
 }
 
 func unmarshalResults(hits []*elastic.SearchHit) ([]DocumentStructure, error) {
-	documents := make([]DocumentStructure, 0)
-
-	for _, hit := range hits {
-		doc := DocumentStructure{}
-		if unmarshalErr := json.Unmarshal(hit.Source, &doc); unmarshalErr != nil {
-			return nil, unmarshalErr
+	documents := make([]DocumentStructure, len(hits))
+	for i, hit := range hits {
+		var doc DocumentStructure
+		if err := json.Unmarshal(hit.Source, &doc); err != nil {
+			return nil, err
 		}
-		documents = append(documents, doc)
-		log.Printf("document by URL: %s, Caption: %s\n", doc.URL, doc.Caption)
+		doc.ID = hit.Id // Set the document ID from the search hit
+		documents[i] = doc
 	}
-
 	return documents, nil
 }
 
