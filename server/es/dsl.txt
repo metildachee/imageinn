@@ -1,0 +1,8 @@
+curl -X GET "http://localhost:9200/images/_search" -H 'Content-Type: application/json' -d'
+{
+  "query": {
+    "match": {
+      "caption": "example"
+    }
+  }
+}'

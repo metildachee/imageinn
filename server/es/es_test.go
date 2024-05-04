@@ -1,4 +1,4 @@
-package main
+package es
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 )
 
 func getTestElasticClient(t *testing.T) *Searcher {
-	conf := config2.LoadConfig("config/config.yml")
+	conf := config2.LoadConfig("../config/config.yml")
 	searcher, err := NewSearcher(*conf)
 	if err != nil {
 		t.FailNow()
