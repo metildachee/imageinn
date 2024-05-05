@@ -3,3 +3,5 @@
 *.txt
 *.git status
 bulk
+.idea
+.xml
