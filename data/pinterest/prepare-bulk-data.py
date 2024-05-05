@@ -13,32 +13,27 @@ def read_category_file(file_path):
         idx = 0
         for line in file:
             idx += 1
-            category_name = line.strip()  # Assuming each line is "category_id,category_name"
+            category_name = line.strip()
             category_map[idx] = category_name
     return category_map
 
-# File paths
 board_to_category_path = 'board_to_category.json'
 board_to_pin_path = 'board_to_pins.json'
 pin_to_img_path = 'pin_to_img.json'
 category_path = 'categories.txt'
 
-# Reading the files
 board_to_category = read_json_file_line_by_line(board_to_category_path)
 board_to_pin = read_json_file_line_by_line(board_to_pin_path)
 pin_to_img = read_json_file_line_by_line(pin_to_img_path)
 category_map = read_category_file(category_path)
 
-# Map boards to categories
 board_category_map = {item["board_id"]: item["cate_id"] for item in board_to_category}
 
-# Map pins to boards
 pin_board_map = {}
 for item in board_to_pin:
     for pin in item["pins"]:
         pin_board_map[pin] = item["board_id"]
 
-# Create a dictionary to map pin_id to category_id and image URL
 pin_details_map = {}
 for pin in pin_to_img:
     pin_id = pin["pin_id"]
@@ -54,22 +49,18 @@ for pin in pin_to_img:
                 'caption': category_map[int(cate_id)] 
             }
 
-output_file_path = 'pinterest_es.json'  # Change this to the desired path
+output_file_path = 'pinterest_es.json' 
 
 with open(output_file_path, 'w') as file:
     for pin_id, details in pin_details_map.items():
-        # Creating the action/metadata line
         action = {
             "index": {
-                "_index": "images",  # Your index name
-                "_id": details['id']  # Use the pin_id as the document ID in Elasticsearch
+                "_index": "images", 
+                "_id": details['id']
             }
         }
-        # Write the action line
         file.write(json.dumps(action) + '\n')
         
-        # Remove the id from the details as it's already used in the index action
         del details['id'] # We fill up in the server side
 
-        # Write the document line
         file.write(json.dumps(details) + '\n')
