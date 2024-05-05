@@ -1,4 +1,5 @@
 *.json
 *.bson
 *.txt
-*.ipynb
+*.git status
+bulk

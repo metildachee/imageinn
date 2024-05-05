@@ -29,8 +29,6 @@ board_to_pin = read_json_file_line_by_line(board_to_pin_path)
 pin_to_img = read_json_file_line_by_line(pin_to_img_path)
 category_map = read_category_file(category_path)
 
-print(category_map)
-
 # Map boards to categories
 board_category_map = {item["board_id"]: item["cate_id"] for item in board_to_category}
 
@@ -52,7 +50,7 @@ for pin in pin_to_img:
             pin_details_map[pin_id] = {
                 'id': pin_id,
                 'category_ids': [int(cate_id)],
-                'image_url': img_url,
+                'url': img_url,
                 'caption': category_map[int(cate_id)] 
             }
 
@@ -71,7 +69,7 @@ with open(output_file_path, 'w') as file:
         file.write(json.dumps(action) + '\n')
         
         # Remove the id from the details as it's already used in the index action
-        del details['id']
+        del details['id'] # We fill up in the server side
 
         # Write the document line
         file.write(json.dumps(details) + '\n')
