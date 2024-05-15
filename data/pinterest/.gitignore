@@ -1,7 +1,0 @@
-*.json
-*.bson
-*.txt
-*.git status
-bulk
-.idea
-.xml
