@@ -46,7 +46,8 @@ for pin in pin_to_img:
                 'id': pin_id,
                 'category_ids': [int(cate_id)],
                 'url': img_url,
-                'caption': category_map[int(cate_id)] 
+                'caption': category_map[int(cate_id)],
+                'source': "pinterest"
             }
 
 output_file_path = 'pinterest_es.json' 

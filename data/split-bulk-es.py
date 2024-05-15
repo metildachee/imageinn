@@ -18,8 +18,8 @@ def split_bulk_json(input_file, output_dir, rows_per_file):
         with open(f'{output_dir}/bulk_part_{i+1}.json', 'w') as output_file:
             output_file.writelines(current_lines)
 
-input_file = 'pinterest_es.json'
-output_dir = 'bulk'
+input_file = 'amazon/amazon_es.json'
+output_dir = 'amazon/bulk'
 rows_per_file = 5000
 
 split_bulk_json(input_file, output_dir, rows_per_file)

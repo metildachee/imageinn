@@ -1,5 +1,5 @@
 #!/bin/bash
-directory="bulk"
+directory="amazon/bulk"
 
 url="http://localhost:9200/_bulk"
 
