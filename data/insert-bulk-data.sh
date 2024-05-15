@@ -1,5 +1,12 @@
 #!/bin/bash
-directory="amazon/bulk"
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <root directory> of where bulk is"
+    exit 1
+fi
+
+DIRECTORY=$1
+
+directory="$DIRECTORY"/bulk
 
 url="http://localhost:9200/_bulk"
 
