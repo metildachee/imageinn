@@ -13,6 +13,7 @@ type Config struct {
 		Sniff       bool   `yaml:"sniff"`
 		HealthCheck bool   `yaml:"health-check"`
 	} `yaml:"elasticsearch"`
+	CategoryMemCachePath string `yaml:"category-mem-cache-path"`
 }
 
 func LoadConfig(path string) *Config {

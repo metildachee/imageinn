@@ -27,3 +27,7 @@ func StrToInt64(s string) (int64, error) {
 	}
 	return result, nil
 }
+
+func InterfaceToString(value interface{}) string {
+	return fmt.Sprintf("%v", value)
+}

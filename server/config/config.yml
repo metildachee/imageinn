@@ -3,3 +3,4 @@ elasticsearch:
   url: "http://localhost:9200"
   sniff: false
   health-check: false
+category-mem-cache-path: "../data/pinterest/categories.txt"
