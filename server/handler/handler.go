@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/metildachee/imageinn/server/es"
+	"github.com/metildachee/imageinn/server/memcache"
 	"github.com/metildachee/imageinn/server/utils"
 	"log"
 	"net/http"
@@ -25,12 +26,26 @@ type SearchResponse struct {
 	TotalCount int64                  `json:"total_count"`
 }
 
-type WebHandler struct {
-	searcher *es.Searcher
+type Bucket struct {
+	Key   string `json:"key_string"`
+	Count int64  `json:"count"`
 }
 
-func NewWebHandler(searcher *es.Searcher) *WebHandler {
-	return &WebHandler{searcher: searcher}
+type CategoryRequest struct {
+	Count int64 `json:"count"`
+}
+
+type CategoryResponse struct {
+	Categories []Bucket `json:"categories"`
+}
+
+type WebHandler struct {
+	searcher *es.Searcher
+	memcache *memcache.Memcache
+}
+
+func NewWebHandler(searcher *es.Searcher, memcache *memcache.Memcache) *WebHandler {
+	return &WebHandler{searcher: searcher, memcache: memcache}
 }
 
 func validateAndProcessRequest(ctx context.Context, r *http.Request) (*SearchRequest, error) {
@@ -76,6 +91,22 @@ func validateAndProcessRequest(ctx context.Context, r *http.Request) (*SearchReq
 	}
 
 	return searchRequest, nil
+}
+
+func validateCategoryRequest(ctx context.Context, r *http.Request) (*CategoryRequest, error) {
+	queryParameters := r.URL.Query()
+	countQuery := queryParameters.Get("count")
+
+	count, err := utils.StrToInt64(countQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	if count <= 0 {
+		count = 10
+	}
+
+	return &CategoryRequest{Count: count}, nil
 }
 
 func (h *WebHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
@@ -127,6 +158,47 @@ func (h *WebHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("request", searchReq, "response", searchResp)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
+}
+
+func (h *WebHandler) CategoryHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+
+	catReq, err := validateCategoryRequest(ctx, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	catResults, err := h.searcher.SearchCategoryInformation(ctx, int(catReq.Count))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	categoryResponse := CategoryResponse{Categories: make([]Bucket, 0)}
+	for _, category := range catResults {
+		id, conversionErr := utils.StrToInt64(utils.InterfaceToString(category.Key))
+		if conversionErr != nil {
+			http.Error(w, conversionErr.Error(), http.StatusInternalServerError)
+		}
+
+		catName, lookupErr := h.memcache.Lookup(id)
+		if lookupErr != nil {
+			log.Println("look up got error but its ok", lookupErr)
+		}
+		categoryResponse.Categories = append(categoryResponse.Categories, Bucket{
+			Key:   catName,
+			Count: category.DocCount,
+		})
+	}
+
+	jsonResponse, err := json.Marshal(categoryResponse)
+	if err != nil {
+		http.Error(w, "failed to serialize search results", http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("request", catReq, "response", catResults)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResponse)
 }

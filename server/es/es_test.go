@@ -135,3 +135,21 @@ func Test_SearchByCategories(t *testing.T) {
 	fmt.Println(funcName, "len(results)", totalHits)
 	fmt.Println(results)
 }
+
+func Test_SearchCategoryInformation(t *testing.T) {
+	funcName := "Test_SearchCategoryInformation"
+	searcher := getTestElasticClient(t)
+
+	ctx := context.Background()
+	size := 20
+	bucketInfos, err := searcher.SearchCategoryInformation(ctx, size)
+	if err != nil {
+		fmt.Println("got error", err)
+		t.FailNow()
+	}
+
+	fmt.Println(funcName)
+	for _, bucketInfo := range bucketInfos {
+		fmt.Println(bucketInfo.Key, bucketInfo.DocCount)
+	}
+}

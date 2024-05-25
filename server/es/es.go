@@ -3,6 +3,8 @@ package es
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/metildachee/imageinn/server/config"
 	"github.com/olivere/elastic/v7"
 	"log"
@@ -15,6 +17,11 @@ type DocumentStructure struct {
 	Caption     string  `json:"caption"`
 	ID          string  `json:"id"`
 	CategoryIDs []int64 `json:"category_ids"`
+}
+
+type BucketStructure struct {
+	Key      string `json:"key"`
+	DocCount int64  `json:"doc_count"`
 }
 
 type Searcher struct {
@@ -125,4 +132,23 @@ func (s *Searcher) SearchByKeywordsAndCategoryIDsStrictAnd(ctx context.Context, 
 	combinedQuery := elastic.NewBoolQuery().Must(categoryQuery, keywordQuery)
 
 	return s.doSearch(ctx, combinedQuery)
+}
+
+func (s *Searcher) SearchCategoryInformation(ctx context.Context, size int) ([]*elastic.AggregationBucketKeyItem, error) {
+	agg := elastic.NewTermsAggregation().Field("category_ids").Size(size)
+	searchResult, err := s.client.Search().
+		Index(s.index).
+		Aggregation("category_counts", agg).
+		Size(0).
+		Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error performing search request: %v", err)
+	}
+
+	aggResult, found := searchResult.Aggregations.Terms("category_counts")
+	if !found {
+		return nil, errors.New("aggregation 'category_counts' not found in the search result")
+	}
+
+	return aggResult.Buckets, nil
 }

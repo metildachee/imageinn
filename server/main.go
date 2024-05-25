@@ -6,6 +6,7 @@ import (
 	config "github.com/metildachee/imageinn/server/config"
 	"github.com/metildachee/imageinn/server/es"
 	"github.com/metildachee/imageinn/server/handler"
+	"github.com/metildachee/imageinn/server/memcache"
 	"log"
 	"net/http"
 )
@@ -17,10 +18,15 @@ func main() {
 	if err != nil {
 		log.Fatalln("load searcher failed", err)
 	}
-	webHandler := handler.NewWebHandler(searcher)
+	memcache, err := memcache.NewMemcache(serverConfig.CategoryMemCachePath)
+	if err != nil {
+		log.Fatalln("load memcache failed", err)
+	}
+	webHandler := handler.NewWebHandler(searcher, memcache)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/search", webHandler.SearchHandler).Methods("GET")
+	r.HandleFunc("/category_info", webHandler.CategoryHandler).Methods("GET")
 
 	corsObj := handlers.CORS(
 		handlers.AllowedOrigins([]string{"http://localhost:3000"}), // Adjust to match your requirement
