@@ -1,22 +1,24 @@
 package es
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	elasticsearch "github.com/elastic/go-elasticsearch/v8"
 	"github.com/metildachee/imageinn/server/config"
-	"github.com/olivere/elastic/v7"
-	"log"
+	"io"
+	"net/http"
 )
 
-// TODO: Add interface
-
 type DocumentStructure struct {
-	URL         string  `json:"url"`
-	Caption     string  `json:"caption"`
-	ID          string  `json:"id"`
-	CategoryIDs []int64 `json:"category_ids"`
+	ImgBase64     string    `json:"img_base64"`
+	Title         string    `json:"title"`
+	ID            string    `json:"id"`
+	CategoryNames []string  `json:"category_names"`
+	Embedding     []float64 `json:"embedding"`
 }
 
 type BucketStructure struct {
@@ -24,131 +26,238 @@ type BucketStructure struct {
 	DocCount int64  `json:"doc_count"`
 }
 
-type Searcher struct {
-	client *elastic.Client
-	index  string
+const (
+	TitleField        = "title"
+	CategoryNameField = "category_names"
+)
+
+type SearchClient struct {
+	client   *elasticsearch.Client
+	index    string
+	endpoint string
 }
 
-func NewSearcher(config config.Config) (*Searcher, error) {
-	client, err := elastic.NewClient(
-		elastic.SetURL(config.Elasticsearch.Url),
-		elastic.SetSniff(config.Elasticsearch.Sniff),
-		elastic.SetHealthcheck(config.Elasticsearch.HealthCheck),
-		//elastic.SetBasicAuth("elastic", "rTur2xp5QmFAvEAPJjfT"),
-	)
+func decodeResponseData(data []byte) ([]float64, error) {
+	var respData interface{}
+	err := json.Unmarshal(data, &respData)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Searcher{
-		client: client,
-		index:  config.Elasticsearch.Index,
+	type ResponseData struct {
+		TextFeatures []float64 `json:"text_features"`
+	}
+	var responseData ResponseData
+	err = json.Unmarshal(data, &responseData)
+
+	return responseData.TextFeatures, nil
+}
+
+func getEmbedding(txt string, endpoint string) ([]float64, error) {
+	requestBody := map[string]interface{}{
+		"text": txt,
+	}
+	requestBodyBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.Post(endpoint, "application/json", bytes.NewBuffer(requestBodyBytes))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(fmt.Sprintf("unexpected status code: %d", resp.StatusCode))
+	}
+
+	bts, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return decodeResponseData(bts)
+}
+
+func NewSearcher(config config.Config) (*SearchClient, error) {
+	cfg := elasticsearch.Config{
+		Addresses: []string{config.Elasticsearch.Url},
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	if config.Elasticsearch.ApiKey != "" {
+		cfg.APIKey = config.Elasticsearch.ApiKey
+	}
+
+	es, err := elasticsearch.NewClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &SearchClient{
+		client:   es,
+		index:    config.Elasticsearch.Index,
+		endpoint: config.ModelEndpoint,
 	}, nil
 }
 
-func unmarshalResults(hits []*elastic.SearchHit) ([]DocumentStructure, error) {
-	documents := make([]DocumentStructure, len(hits))
-	for i, hit := range hits {
-		var doc DocumentStructure
-		if err := json.Unmarshal(hit.Source, &doc); err != nil {
-			return nil, err
+func (s *SearchClient) doSearch(ctx context.Context, query map[string]interface{}) ([]DocumentStructure, int64, error) {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(query); err != nil {
+		return nil, 0, err
+	}
+
+	res, err := s.client.Search(
+		s.client.Search.WithContext(ctx),
+		s.client.Search.WithIndex(s.index),
+		s.client.Search.WithBody(&buf),
+		s.client.Search.WithTrackTotalHits(true),
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer res.Body.Close()
+
+	var result map[string]interface{}
+	if decodeErr := json.NewDecoder(res.Body).Decode(&result); decodeErr != nil {
+		fmt.Println("Error decoding JSON:", err)
+		return nil, 0, decodeErr
+	}
+
+	hits, ok := result["hits"].(map[string]interface{})["hits"].([]interface{})
+	if !ok {
+		return nil, 0, errors.New("failed to extract hits from response")
+	}
+
+	docs := make([]DocumentStructure, 0)
+	for _, hit := range hits {
+		source, ok := hit.(map[string]interface{})["_source"].(map[string]interface{})
+		if !ok {
+			return nil, 0, errors.New("error extracting _source from hit")
 		}
-		doc.ID = hit.Id // Set the document ID from the search hit
-		documents[i] = doc
+
+		var doc DocumentStructure
+		docBytes, marshalErr := json.Marshal(source)
+		if marshalErr != nil {
+			fmt.Println("Error marshaling _source to bytes:", marshalErr)
+			return nil, 0, marshalErr
+		}
+		if unmarshalErr := json.Unmarshal(docBytes, &doc); unmarshalErr != nil {
+			fmt.Println("Error unmarshaling _source into DocumentStructure:", unmarshalErr)
+			return nil, 0, unmarshalErr
+		}
+		docs = append(docs, doc)
 	}
-	return documents, nil
+
+	totalDocs, ok := result["hits"].(map[string]interface{})["total"].(map[string]interface{})["value"].(float64)
+	if !ok {
+		return nil, 0, errors.New("could not get total number of hits")
+	}
+	return docs, int64(totalDocs), nil
 }
 
-func (s *Searcher) doSearch(ctx context.Context, query elastic.Query) ([]DocumentStructure, int64, error) {
-	src, err := query.Source()
+func (s *SearchClient) SearchText(ctx context.Context, query string) ([]DocumentStructure, int64, error) {
+	esQuery := map[string]interface{}{
+		"_source": map[string]interface{}{
+			"excludes": []string{"img", "embedding"},
+		},
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				"should": []map[string]interface{}{
+					{
+						"match": map[string]interface{}{
+							"title": query,
+						},
+					},
+					{
+						"match": map[string]interface{}{
+							"category_names": query,
+						},
+					},
+				},
+				"minimum_should_match": 1,
+			},
+		},
+	}
+
+	return s.doSearch(ctx, esQuery)
+}
+
+func (s *SearchClient) SearchTextFuzzy(ctx context.Context, query string) ([]DocumentStructure, int64, error) {
+	esQuery := map[string]interface{}{
+		"_source": map[string]interface{}{
+			"excludes": []string{"img", "embedding"},
+		},
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				"must": []map[string]interface{}{
+					{
+						"multi_match": map[string]interface{}{
+							"query":     query,
+							"fields":    []string{"title", "category_names"},
+							"fuzziness": "AUTO",
+						},
+					},
+				},
+			},
+		},
+	}
+	return s.doSearch(ctx, esQuery)
+}
+
+func (s *SearchClient) SearchTextWithExclusions(ctx context.Context, query string, excludes []string) ([]DocumentStructure, int64, error) {
+	esQuery := map[string]interface{}{
+		"_source": map[string]interface{}{
+			"excludes": []string{"img", "embedding"},
+		},
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				"should": []map[string]interface{}{
+					{
+						"match": map[string]interface{}{
+							"title": query,
+						},
+					},
+					{
+						"match": map[string]interface{}{
+							"category_names": query,
+						},
+					},
+				},
+				"must_not": []map[string]interface{}{
+					{
+						"terms": map[string]interface{}{
+							"title": excludes,
+						},
+					},
+				},
+				"minimum_should_match": 1,
+			},
+		},
+	}
+	return s.doSearch(ctx, esQuery)
+}
+
+func (s *SearchClient) SearchTextInImage(ctx context.Context, query string) ([]DocumentStructure, int64, error) {
+	embedding, err := getEmbedding(query, s.endpoint)
 	if err != nil {
-		log.Println("error getting query source:", err)
 		return nil, 0, err
 	}
-	srcBytes, err := json.MarshalIndent(src, "", "  ")
-	if err != nil {
-		log.Println("error marshaling query source to JSON:", err)
-		return nil, 0, err
-	}
-	log.Println("query source:", string(srcBytes))
 
-	searchResult, err := s.client.Search().
-		Index(s.index).
-		Query(query).
-		From(0).Size(10).
-		Do(ctx)
-	if err != nil {
-		log.Println("search got error", err)
-		return nil, 0, err
-	}
-
-	totalHits := searchResult.TotalHits()
-	hits, unmarshalErr := unmarshalResults(searchResult.Hits.Hits)
-	log.Println("hits", hits)
-	return hits, totalHits, unmarshalErr
+	return s.doKNN(ctx, embedding)
 }
 
-func (s *Searcher) SearchByCategoryID(ctx context.Context, categoryID int64) ([]DocumentStructure, int64, error) {
-	termQuery := elastic.NewTermQuery("category_ids", categoryID)
-	return s.doSearch(ctx, termQuery)
-}
-
-func (s *Searcher) SearchByCategoryIDsAndOr(ctx context.Context, categoryIDs []int64) ([]DocumentStructure, int64, error) {
-	andCategoryQuery := elastic.NewBoolQuery()
-	for _, category := range categoryIDs {
-		andCategoryQuery.Must(elastic.NewTermQuery("category_ids", category))
-	}
-	orCategoryQuery := elastic.NewBoolQuery()
-	for _, category := range categoryIDs {
-		orCategoryQuery.Should(elastic.NewTermQuery("category_ids", category))
-	}
-	query := elastic.NewBoolQuery().Should(andCategoryQuery, orCategoryQuery)
-	return s.doSearch(ctx, query)
-}
-
-func (s *Searcher) SearchByKeywordsAndOr(ctx context.Context, keywords []string) ([]DocumentStructure, int64, error) {
-	andQuery := elastic.NewBoolQuery()
-	for _, keyword := range keywords {
-		andQuery.Must(elastic.NewMatchQuery("caption", keyword))
-	}
-	orQuery := elastic.NewBoolQuery()
-	for _, keyword := range keywords {
-		orQuery.Should(elastic.NewMatchQuery("caption", keyword))
-	}
-	query := elastic.NewBoolQuery().Should(andQuery, orQuery)
-	return s.doSearch(ctx, query)
-}
-
-func (s *Searcher) SearchByKeywordsAndCategoryIDsStrictAnd(ctx context.Context, categoryIDs []int64, keywords []string) ([]DocumentStructure, int64, error) {
-	// All AND logic
-	categoryQuery := elastic.NewBoolQuery()
-	for _, category := range categoryIDs {
-		categoryQuery.Must(elastic.NewTermQuery("category_ids", category))
-	}
-	keywordQuery := elastic.NewBoolQuery()
-	for _, keyword := range keywords {
-		keywordQuery.Must(elastic.NewMatchQuery("caption", keyword))
-	}
-	combinedQuery := elastic.NewBoolQuery().Must(categoryQuery, keywordQuery)
-
-	return s.doSearch(ctx, combinedQuery)
-}
-
-func (s *Searcher) SearchCategoryInformation(ctx context.Context, size int) ([]*elastic.AggregationBucketKeyItem, error) {
-	agg := elastic.NewTermsAggregation().Field("category_ids").Size(size)
-	searchResult, err := s.client.Search().
-		Index(s.index).
-		Aggregation("category_counts", agg).
-		Size(0).
-		Do(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error performing search request: %v", err)
+func (s *SearchClient) doKNN(ctx context.Context, target []float64) ([]DocumentStructure, int64, error) {
+	knnQuery := map[string]interface{}{
+		"knn": map[string]interface{}{
+			"field":          "embedding",
+			"query_vector":   target,
+			"k":              10,
+			"num_candidates": 100,
+		},
+		"fields": []string{TitleField, CategoryNameField},
 	}
 
-	aggResult, found := searchResult.Aggregations.Terms("category_counts")
-	if !found {
-		return nil, errors.New("aggregation 'category_counts' not found in the search result")
-	}
-
-	return aggResult.Buckets, nil
+	return s.doSearch(ctx, knnQuery)
 }

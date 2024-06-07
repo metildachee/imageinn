@@ -1,0 +1,39 @@
+PUT /imageinn
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 1,
+    "analysis": {
+      "analyzer": {
+        "english": {
+          "type": "standard",
+          "stopwords": "_english_"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "img_base64": {
+        "type": "keyword",
+        "index": false
+      },
+      "category_names": {
+        "type": "text",
+        "analyzer": "english"
+      },
+      "id": {
+        "type": "keyword"
+      },
+      "title": {
+        "type": "text",
+        "analyzer": "english"
+      },
+      "vector_embedding": {
+        "type": "dense_vector",
+        "dims": 768
+      }
+    }
+  }
+}
+

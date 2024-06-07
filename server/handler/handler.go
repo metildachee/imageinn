@@ -40,11 +40,11 @@ type CategoryResponse struct {
 }
 
 type WebHandler struct {
-	searcher *es.Searcher
+	searcher *es.SearchClient
 	memcache *memcache.Memcache
 }
 
-func NewWebHandler(searcher *es.Searcher, memcache *memcache.Memcache) *WebHandler {
+func NewWebHandler(searcher *es.SearchClient, memcache *memcache.Memcache) *WebHandler {
 	return &WebHandler{searcher: searcher, memcache: memcache}
 }
 

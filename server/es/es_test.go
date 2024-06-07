@@ -7,23 +7,23 @@ import (
 	"testing"
 )
 
-func getTestElasticClient(t *testing.T) *Searcher {
+func getTestElasticClient(t *testing.T) *SearchClient {
 	conf := config2.LoadConfig("../config/config.yml")
 	searcher, err := NewSearcher(*conf)
 	if err != nil {
+		t.FailNow()
 		t.FailNow()
 	}
 	return searcher
 }
 
-func Test_SearchByKeyword_OneHit(t *testing.T) {
-	funcName := "Test_SearchByKeyword_OneHit"
+func Test_SearchText(t *testing.T) {
+	funcName := "SearchText"
 
 	ctx := context.Background()
-	keywords := []string{"example"}
 	searcher := getTestElasticClient(t)
 
-	results, totalHits, err := searcher.SearchByKeywordsAndOr(ctx, keywords)
+	results, totalHits, err := searcher.SearchText(ctx, "iron story")
 	if err != nil {
 		fmt.Println("got error", err)
 		t.FailNow()
@@ -33,14 +33,13 @@ func Test_SearchByKeyword_OneHit(t *testing.T) {
 	fmt.Println(results)
 }
 
-func Test_SearchByKeyword_PartialKeywordHit(t *testing.T) {
-	funcName := "Test_SearchByKeyword_PartialKeywordHit"
+func Test_SearchTextWithExclusions(t *testing.T) {
+	funcName := "Test_SearchTextWithExclusions"
 
 	ctx := context.Background()
-	keywords := []string{"example", "apple"}
 	searcher := getTestElasticClient(t)
 
-	results, totalHits, err := searcher.SearchByKeywordsAndOr(ctx, keywords)
+	results, totalHits, err := searcher.SearchTextWithExclusions(ctx, "iron", []string{"man"})
 	if err != nil {
 		fmt.Println("got error", err)
 		t.FailNow()
@@ -50,33 +49,13 @@ func Test_SearchByKeyword_PartialKeywordHit(t *testing.T) {
 	fmt.Println(results)
 }
 
-func Test_SearchByKeyword_NilHit(t *testing.T) {
-	funcName := "Test_SearchByKeyword_NilHit"
+func Test_SearchTextInImage(t *testing.T) {
+	funcName := "Test_SearchTextInImage"
 
 	ctx := context.Background()
-	keywords := []string{"apple"}
 	searcher := getTestElasticClient(t)
 
-	results, totalHits, err := searcher.SearchByKeywordsAndOr(ctx, keywords)
-	if err != nil {
-		fmt.Println("got error", err)
-		t.FailNow()
-	}
-
-	if totalHits != 0 {
-		t.FailNow()
-	}
-
-	fmt.Println(funcName, "len(results)", totalHits)
-	fmt.Println(results)
-}
-
-func Test_SearchByOneCategory(t *testing.T) {
-	funcName := "Test_SearchByCategory"
-	searcher := getTestElasticClient(t)
-
-	ctx := context.Background()
-	results, totalHits, err := searcher.SearchByCategoryID(ctx, 100)
+	results, totalHits, err := searcher.SearchTextInImage(ctx, "mountains of the moon")
 	if err != nil {
 		fmt.Println("got error", err)
 		t.FailNow()
@@ -84,72 +63,4 @@ func Test_SearchByOneCategory(t *testing.T) {
 
 	fmt.Println(funcName, "len(results)", totalHits)
 	fmt.Println(results)
-}
-
-func Test_SearchByPartialCategory(t *testing.T) {
-	funcName := "Test_SearchByPartialCategory"
-	searcher := getTestElasticClient(t)
-
-	ctx := context.Background()
-	categories := []int64{100, 88}
-
-	results, totalHits, err := searcher.SearchByCategoryIDsAndOr(ctx, categories)
-	if err != nil {
-		fmt.Println("got error", err)
-		t.FailNow()
-	}
-
-	fmt.Println(funcName, "len(results)", totalHits)
-	fmt.Println(results)
-}
-
-func Test_SearchByAllCategory(t *testing.T) {
-	funcName := "Test_SearchByAllCategory"
-	searcher := getTestElasticClient(t)
-
-	ctx := context.Background()
-	categories := []int64{100, 101}
-
-	results, totalHits, err := searcher.SearchByCategoryIDsAndOr(ctx, categories)
-	if err != nil {
-		fmt.Println("got error", err)
-		t.FailNow()
-	}
-
-	fmt.Println(funcName, "len(results)", totalHits)
-	fmt.Println(results)
-}
-
-func Test_SearchByCategories(t *testing.T) {
-	funcName := "Test_SearchByCategories"
-	searcher := getTestElasticClient(t)
-
-	ctx := context.Background()
-	categoryIDs := []int64{100, 101}
-	results, totalHits, err := searcher.SearchByCategoryIDsAndOr(ctx, categoryIDs)
-	if err != nil {
-		fmt.Println("got error", err)
-		t.FailNow()
-	}
-
-	fmt.Println(funcName, "len(results)", totalHits)
-	fmt.Println(results)
-}
-
-func Test_SearchCategoryInformation(t *testing.T) {
-	funcName := "Test_SearchCategoryInformation"
-	searcher := getTestElasticClient(t)
-
-	ctx := context.Background()
-	size := 20
-	bucketInfos, err := searcher.SearchCategoryInformation(ctx, size)
-	if err != nil {
-		fmt.Println("got error", err)
-		t.FailNow()
-	}
-
-	fmt.Println(funcName)
-	for _, bucketInfo := range bucketInfos {
-		fmt.Println(bucketInfo.Key, bucketInfo.DocCount)
-	}
 }

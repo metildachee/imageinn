@@ -12,7 +12,11 @@ type Config struct {
 		Url         string `yaml:"url"`
 		Sniff       bool   `yaml:"sniff"`
 		HealthCheck bool   `yaml:"health-check"`
+		Username    string `yaml:"username"`
+		Password    string `yaml:"password"`
+		ApiKey      string `yaml:"api-key"`
 	} `yaml:"elasticsearch"`
+	ModelEndpoint        string `yaml:"model-endpoint"`
 	CategoryMemCachePath string `yaml:"category-mem-cache-path"`
 }
 
