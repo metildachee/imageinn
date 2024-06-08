@@ -19,11 +19,7 @@ type DocumentStructure struct {
 	ID            string    `json:"id"`
 	CategoryNames []string  `json:"category_names"`
 	Embedding     []float64 `json:"embedding"`
-}
-
-type BucketStructure struct {
-	Key      string `json:"key"`
-	DocCount int64  `json:"doc_count"`
+	Score         float64   `json:"score"`
 }
 
 const (
@@ -121,7 +117,6 @@ func (s *SearchClient) doSearch(ctx context.Context, query map[string]interface{
 
 	var result map[string]interface{}
 	if decodeErr := json.NewDecoder(res.Body).Decode(&result); decodeErr != nil {
-		fmt.Println("Error decoding JSON:", err)
 		return nil, 0, decodeErr
 	}
 
@@ -132,9 +127,24 @@ func (s *SearchClient) doSearch(ctx context.Context, query map[string]interface{
 
 	docs := make([]DocumentStructure, 0)
 	for _, hit := range hits {
-		source, ok := hit.(map[string]interface{})["_source"].(map[string]interface{})
+		hitMap, ok := hit.(map[string]interface{})
+		if !ok {
+			return nil, 0, errors.New("error extracting hit from response")
+		}
+
+		source, ok := hitMap["_source"].(map[string]interface{})
 		if !ok {
 			return nil, 0, errors.New("error extracting _source from hit")
+		}
+
+		score, ok := hitMap["_score"].(float64)
+		if !ok {
+			return nil, 0, errors.New("error extracting _score from hit")
+		}
+
+		id, ok := hitMap["_id"].(string)
+		if !ok {
+			return nil, 0, errors.New("error extracting _score from hit")
 		}
 
 		var doc DocumentStructure
@@ -147,6 +157,9 @@ func (s *SearchClient) doSearch(ctx context.Context, query map[string]interface{
 			fmt.Println("Error unmarshaling _source into DocumentStructure:", unmarshalErr)
 			return nil, 0, unmarshalErr
 		}
+
+		doc.Score = score
+		doc.ID = id
 		docs = append(docs, doc)
 	}
 
@@ -246,6 +259,87 @@ func (s *SearchClient) SearchTextInImage(ctx context.Context, query string) ([]D
 	}
 
 	return s.doKNN(ctx, embedding)
+}
+
+func (s *SearchClient) SearchTextWithFuzzy(ctx context.Context, query string, isAnd bool, excludes []string) ([]DocumentStructure, int64, error) {
+	logic := "should"
+	if isAnd {
+		logic = "must"
+	}
+	esQuery := map[string]interface{}{
+		"_source": map[string]interface{}{
+			"excludes": []string{"img", "embedding"},
+		},
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				logic: []map[string]interface{}{
+					{
+						"multi_match": map[string]interface{}{
+							"query":     query,
+							"fields":    []string{"title", "category_names"},
+							"fuzziness": "AUTO",
+						},
+					},
+					{
+						"match": map[string]interface{}{
+							"caption": query,
+						},
+					},
+					{
+						"match": map[string]interface{}{
+							"category_names": query,
+						},
+					},
+				},
+				"must_not": []map[string]interface{}{
+					{
+						"terms": map[string]interface{}{
+							"title": excludes,
+						},
+					},
+				},
+				"minimum_should_match": 1,
+			},
+		},
+	}
+	return s.doSearch(ctx, esQuery)
+}
+
+func (s *SearchClient) SearchTextNoFuzzy(ctx context.Context, query string, isAnd bool, excludes []string) ([]DocumentStructure, int64, error) {
+	logic := "should"
+	if isAnd {
+		logic = "must"
+	}
+	esQuery := map[string]interface{}{
+		"_source": map[string]interface{}{
+			"excludes": []string{"img", "embedding"},
+		},
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				logic: []map[string]interface{}{
+					{
+						"match": map[string]interface{}{
+							"caption": query,
+						},
+					},
+					{
+						"match": map[string]interface{}{
+							"category_names": query,
+						},
+					},
+				},
+				"must_not": []map[string]interface{}{
+					{
+						"terms": map[string]interface{}{
+							"title": excludes,
+						},
+					},
+				},
+				"minimum_should_match": 1,
+			},
+		},
+	}
+	return s.doSearch(ctx, esQuery)
 }
 
 func (s *SearchClient) doKNN(ctx context.Context, target []float64) ([]DocumentStructure, int64, error) {
