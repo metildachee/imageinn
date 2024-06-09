@@ -49,13 +49,29 @@ func Test_SearchTextWithExclusions(t *testing.T) {
 	fmt.Println(results)
 }
 
-func Test_SearchTextInImage(t *testing.T) {
-	funcName := "Test_SearchTextInImage"
+func Test_SearchTextWithFuzzy(t *testing.T) {
+	funcName := "Test_SearchTextWithFuzzy"
 
 	ctx := context.Background()
 	searcher := getTestElasticClient(t)
 
-	results, totalHits, err := searcher.SearchTextInImage(ctx, "mountains of the moon")
+	results, totalHits, err := searcher.SearchTextWithFuzzy(ctx, "mountains of the moon", false, []string{})
+	if err != nil {
+		fmt.Println("got error", err)
+		t.FailNow()
+	}
+
+	fmt.Println(funcName, "len(results)", totalHits)
+	fmt.Println(results)
+}
+
+func Test_SearchTextNoFuzzy(t *testing.T) {
+	funcName := "Test_SearchTextNoFuzzy"
+
+	ctx := context.Background()
+	searcher := getTestElasticClient(t)
+
+	results, totalHits, err := searcher.SearchTextNoFuzzy(ctx, "mountains of the moon", false, []string{})
 	if err != nil {
 		fmt.Println("got error", err)
 		t.FailNow()

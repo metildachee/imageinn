@@ -28,6 +28,17 @@ type SearchRequestText struct {
 	TextOptions SearchRequestTextOptions `json:"text-options"`
 }
 
+type SearchRequestImage struct {
+	Query string `json:"query"`
+}
+
+func (r *SearchRequestImage) GetQuery() string {
+	if r == nil {
+		return ""
+	}
+	return r.Query
+}
+
 func (rt *SearchRequestText) GetQuery() string {
 	if rt == nil {
 		return ""
@@ -87,6 +98,17 @@ func NewWebHandler(searcher *es.SearchClient, memcache *memcache.Memcache) *WebH
 	return &WebHandler{searcher: searcher, memcache: memcache}
 }
 
+func validateAndProcessImgRequest(ctx context.Context, r *http.Request) (*SearchRequestImage, error) {
+	queryParameters := r.URL.Query()
+	query := queryParameters.Get("q")
+
+	searchRequest := &SearchRequestImage{
+		Query: query,
+	}
+
+	return searchRequest, nil
+}
+
 func validateAndProcessRequest(ctx context.Context, r *http.Request) (*SearchRequestText, error) {
 	queryParameters := r.URL.Query()
 	query := queryParameters.Get("q")
@@ -123,6 +145,37 @@ func validateAndProcessRequest(ctx context.Context, r *http.Request) (*SearchReq
 	return searchRequest, nil
 }
 
+func (h *WebHandler) ImageHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+
+	searchReq, err := validateAndProcessImgRequest(ctx, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	var (
+		searchResults []es.DocumentStructure
+		count         int64
+	)
+
+	searchResults = make([]es.DocumentStructure, 0)
+	searchResults, count, err = h.searcher.SearchTextInImage(ctx, searchReq.GetQuery())
+	searchResp := &SearchResponse{
+		Images:     searchResults,
+		TotalCount: count,
+	}
+
+	jsonResponse, err := json.Marshal(searchResp)
+	if err != nil {
+		http.Error(w, "failed to serialize search results", http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("img request", searchReq, "response", searchResp.TotalCount)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
+}
+
 func (h *WebHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
@@ -136,6 +189,7 @@ func (h *WebHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 		count         int64
 	)
 
+	searchResults = make([]es.DocumentStructure, 0)
 	if searchReq.GetTextOptions().GetIsFuzzy() {
 		searchResults, count, err = h.searcher.SearchTextWithFuzzy(ctx, searchReq.GetQuery(), searchReq.GetTextOptions().GetIsAnd(),
 			searchReq.GetTextOptions().GetExcludes())
@@ -155,7 +209,7 @@ func (h *WebHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("request", searchReq, "response", searchResp)
+	log.Println("request", searchReq, "response", searchResp.TotalCount)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResponse)
 }

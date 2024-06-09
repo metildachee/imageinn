@@ -14,7 +14,7 @@ import (
 )
 
 type DocumentStructure struct {
-	ImgBase64     string    `json:"img_base64"`
+	ImgBase64     string    `json:"img"`
 	Title         string    `json:"title"`
 	ID            string    `json:"id"`
 	CategoryNames []string  `json:"category_names"`
@@ -120,9 +120,14 @@ func (s *SearchClient) doSearch(ctx context.Context, query map[string]interface{
 		return nil, 0, decodeErr
 	}
 
-	hits, ok := result["hits"].(map[string]interface{})["hits"].([]interface{})
+	hitsMap, ok := result["hits"].(map[string]interface{})
 	if !ok {
-		return nil, 0, errors.New("failed to extract hits from response")
+		return nil, 0, errors.New("failed to extract hits map from response")
+	}
+
+	hits, ok := hitsMap["hits"].([]interface{})
+	if !ok {
+		return nil, 0, errors.New("failed to extract hits array from hits map")
 	}
 
 	docs := make([]DocumentStructure, 0)
@@ -268,7 +273,7 @@ func (s *SearchClient) SearchTextWithFuzzy(ctx context.Context, query string, is
 	}
 	esQuery := map[string]interface{}{
 		"_source": map[string]interface{}{
-			"excludes": []string{"img", "embedding"},
+			"excludes": []string{"embedding"},
 		},
 		"query": map[string]interface{}{
 			"bool": map[string]interface{}{
@@ -282,7 +287,7 @@ func (s *SearchClient) SearchTextWithFuzzy(ctx context.Context, query string, is
 					},
 					{
 						"match": map[string]interface{}{
-							"caption": query,
+							"title": query,
 						},
 					},
 					{
@@ -312,14 +317,14 @@ func (s *SearchClient) SearchTextNoFuzzy(ctx context.Context, query string, isAn
 	}
 	esQuery := map[string]interface{}{
 		"_source": map[string]interface{}{
-			"excludes": []string{"img", "embedding"},
+			"excludes": []string{"embedding"},
 		},
 		"query": map[string]interface{}{
 			"bool": map[string]interface{}{
 				logic: []map[string]interface{}{
 					{
 						"match": map[string]interface{}{
-							"caption": query,
+							"title": query,
 						},
 					},
 					{
@@ -332,6 +337,11 @@ func (s *SearchClient) SearchTextNoFuzzy(ctx context.Context, query string, isAn
 					{
 						"terms": map[string]interface{}{
 							"title": excludes,
+						},
+					},
+					{
+						"terms": map[string]interface{}{
+							"category_names": excludes,
 						},
 					},
 				},

@@ -1,3 +1,5 @@
+
+
 .App {
   text-align: center;
 }
@@ -11,6 +13,10 @@
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
   }
+}
+
+body {
+  font-family: "Roboto", sans-serif;
 }
 
 .App-header {
@@ -35,4 +41,274 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.input-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 200px;
+}
+
+.input-field:focus {
+  outline: none;
+  border-bottom: 2px solid #e97f9f;
+}
+
+.input-field::placeholder {
+  font-style: italic;
+}
+
+.cormorant-garamond-light {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 300;
+  font-style: normal;
+}
+
+.cormorant-garamond-regular {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.cormorant-garamond-medium {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 500;
+  font-style: normal;
+}
+
+.cormorant-garamond-semibold {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.cormorant-garamond-bold {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.cormorant-garamond-light-italic {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 300;
+  font-style: italic;
+}
+
+.cormorant-garamond-regular-italic {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.cormorant-garamond-medium-italic {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.cormorant-garamond-semibold-italic {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 600;
+  font-style: italic;
+}
+
+.cormorant-garamond-bold-italic {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 700;
+  font-style: italic;
+}
+
+.input-field {
+  border: none;
+  border-bottom: 2px solid #8a8fea;
+  padding: 8px 0;
+  font-size: 16px !important;
+  background-color: #f8dce4;
+  color: black;
+  width: 200px;
+}
+
+.roboto-thin {
+  font-family: "Roboto", sans-serif;
+  font-weight: 100;
+  font-style: normal;
+}
+
+.roboto-light {
+  font-family: "Roboto", sans-serif;
+  font-weight: 300;
+  font-style: normal;
+}
+
+.roboto-regular {
+  font-family: "Roboto", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.roboto-medium {
+  font-family: "Roboto", sans-serif;
+  font-weight: 500;
+  font-style: normal;
+}
+
+.roboto-bold {
+  font-family: "Roboto", sans-serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.roboto-black {
+  font-family: "Roboto", sans-serif;
+  font-weight: 900;
+  font-style: normal;
+}
+
+.roboto-thin-italic {
+  font-family: "Roboto", sans-serif;
+  font-weight: 100;
+  font-style: italic;
+}
+
+.roboto-light-italic {
+  font-family: "Roboto", sans-serif;
+  font-weight: 300;
+  font-style: italic;
+}
+
+.roboto-regular-italic {
+  font-family: "Roboto", sans-serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.roboto-medium-italic {
+  font-family: "Roboto", sans-serif;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.roboto-bold-italic {
+  font-family: "Roboto", sans-serif;
+  font-weight: 700;
+  font-style: italic;
+}
+
+.roboto-black-italic {
+  font-family: "Roboto", sans-serif;
+  font-weight: 900;
+  font-style: italic;
+}
+
+/* CheckboxWithLabel.css */
+.custom-checkbox .ant-checkbox-inner {
+  background-color: transparent !important;
+  border-color: #8a8fea !important;
+}
+
+.custom-checkbox .ant-checkbox {
+  background-color: transparent !important;
+  border-color: grey !important;
+}
+
+.custom-checkbox .ant-checkbox-inner::after {
+  /* content: 'X'; */
+  content: "";
+  width: 12px; /* Set the width of the icon */
+  height: 12px; /* Set the height of the icon */
+  /* background-image: url("../public/icons/png/letter-x.png"); */
+  color: #8a8fea;
+  background-size: cover;
+  background-color: #8a8fea;
+  /* font-weight: bold; */
+  position: absolute;
+  top: 53%;
+  left: 2px; /* Move the X a little to the left */
+  transform: translateY(-50%);
+  font-size: 14px;
+  padding: 0px;
+  border-color: #8a8fea !important; /* Change the border color when checked */
+}
+
+.custom-checkbox .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: transparent !important; /* Change the background color when checked */
+  border-color: #8a8fea !important;
+}
+
+.custom-checkbox .ant-checkbox-checked .ant-checkbox {
+  background-color: transparent !important;
+  border-color: #8a8fea !important; /* Change the border color when checked */
+}
+
+/* CustomRadio.css */
+
+.custom-radio .ant-radio-wrapper .ant-radio-inner {
+  background-color: transparent;
+  border-color: #8a8fea;
+}
+
+.custom-radio .ant-radio-inner .ant-radio-checked .ant-radio-checked::after {
+  background-color: #8a8fea !important;
+  border-color: #8a8fea !important;
+  border: 1px solid #8a8fea !important;
+}
+
+.custom-radio .ant-radio-checked .ant-radio-inner .ant-checkbox-wrapper {
+  background-color: #8a8fea !important;
+  border-color: #8a8fea !important;
+  border: 1px solid #8a8fea !important;
+}
+
+.custom-radio .ant-radio-inner::after {
+  background-color: #8a8fea !important; /* Fill the radio button with black */
+}
+
+/* model */
+.ant-modal {
+  padding-bottom: 0 !important;
+}
+
+.custom-input-container {
+  position: relative;
+}
+
+.custom-input-field {
+  width: 100%;
+  padding: 8px 10px 10px 10px; /* Adjust padding as needed */
+  border: 1px solid black;
+  border-radius: 5px;
+  outline: none;
+}
+
+.custom-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.custom-icon:first-child {
+  left: 5px; /* Adjust the distance from the left edge */
+}
+
+.custom-icon:last-child {
+  right: 5px; /* Adjust the distance from the right edge */
+}
+
+.ant-form-item-control-input {
+  padding: 0px;
+  min-height: 0px !important;
+}
+
+.input-with-placeholder::placeholder {
+  color: #8a8fea !important;
+  font-family: "Cormorant Garamond", serif;
+  font-weight: bold;
+  font-style: italic;
+}
+
+.on-hover::hover {
+  background-color: red;
+  animation: bounce; /* referring directly to the animation's @keyframe declaration */
+  animation-duration: 2s; /* don't forget to set a duration! */
 }

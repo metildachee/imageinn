@@ -26,6 +26,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/search", webHandler.SearchHandler).Methods("GET")
+	r.HandleFunc("/search_in_image", webHandler.ImageHandler).Methods("GET")
 
 	corsObj := handlers.CORS(
 		handlers.AllowedOrigins([]string{"http://localhost:3000"}), // Adjust to match your requirement
