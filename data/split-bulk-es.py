@@ -25,6 +25,6 @@ def split_bulk_json(input_file, output_dir, rows_per_file):
 
 input_file = args.directory + "/"+ args.directory + "_es.json"
 output_dir = args.directory + "/bulk"
-rows_per_file = 5000
+rows_per_file = 100
 
 split_bulk_json(input_file, output_dir, rows_per_file)

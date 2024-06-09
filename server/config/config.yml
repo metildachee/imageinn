@@ -1,6 +1,10 @@
 elasticsearch:
-  index: "images"
-  url: "http://localhost:9200"
+  index: "imageinn"
+  url: "https://localhost:9200"
   sniff: false
   health-check: false
+  password: "123456"
+  username: "elastic"
+  api-key: "cXJxYl9vOEJCQ2N0MEkzbGg4TG86aGxXUmFCTlFSZlNHOTBTVG95MGN6dw"
+model-endpoint: "http://localhost:5000/encode"
 category-mem-cache-path: "../data/pinterest/categories.txt"
