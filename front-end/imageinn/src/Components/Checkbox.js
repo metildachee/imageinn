@@ -5,7 +5,7 @@ const CheckboxWithLabel = ({ label, onChange, disable }) => {
   const [disabled, setDisabled] = useState(false);
   return (
     <Checkbox
-      style={{ color: "#5AA6FB" }}
+      style={{ color: "#f8dce4" }}
       className="custom-checkbox"
       onChange={onChange}
     >
@@ -14,7 +14,7 @@ const CheckboxWithLabel = ({ label, onChange, disable }) => {
         // style={{ borderColor: disabled ? "gray" : "black" }}
       >
         <span
-          style={{ color: "#8A8FEA" }}
+          style={{ color: "white" }}
           className="cormorant-garamond-bold-italic"
         >
           {label}

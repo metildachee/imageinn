@@ -35,36 +35,72 @@ const HorizontalScroll = ({ data }) => {
   return (
     <div className="scroll-container">
       <Row align="center">
-        <Col span={2}>
-          <div className="action-btns">
+        {/* <Col span={2}>
+          <div className="action-btns" style={{justifyContent: "flex-start"}}>
             <LeftCircleTwoTone twoToneColor="#22120A" onClick={() => handleScroll(-ITEM_WIDTH)} />
           </div>
-        </Col>
-        <Col span={20}>
+        </Col> */}
+        <Col span={22}>
           <div
             ref={containerRef}
             style={{
-              width: "425px",
+              width: "200%",
               overflowX: "scroll",
               scrollBehavior: "smooth",
+              marginLeft: "20px",
             }}
           >
             <div className="content-box">
               {data && data.length > 0
                 ? data.map((img) => (
-                    <div className="card">
-                      <img src={decodeBase64(img.img)} height="100%" />
+                    <div
+                      className="card"
+                      style={{ position: "relative", display: "inline-block" }}
+                    >
+                      <img
+                        src={decodeBase64(img.img)}
+                        height="100%"
+                        alt="Image"
+                      />
+                      <span
+                        style={{
+                          position: "absolute",
+                          bottom: 10,
+                          left: 0,
+                          padding: "5px",
+                          fontFamily: "Roboto",
+                          fontWeight: "900",
+                          textTransform: "uppercase",
+                        //   backgroundColor: "rgba(255, 255, 255, 0.7)",
+                          color: "#E5D7D0"
+                        }}
+                      >
+                        {img.title}
+                      </span>
+                      <span
+                        style={{
+                          position: "absolute",
+                          bottom: -3,
+                          left: -215,
+                        //   transform: "translateX(-50%)",
+                        //   padding: "5px",
+                          fontFamily: "Garamond",
+                        //   backgroundColor: "rgba(255, 255, 255, 0.7)",
+                        }}
+                      >
+                        {img.category_names.length <= 2 ? img.category_names : img.category_names.slice(0, 2).join(", ")}
+                      </span>
                     </div>
                   ))
                 : "no images to display"}
             </div>
           </div>
         </Col>
-        <Col span={2}>
-          <div className="action-btns">
+        {/* <Col span={2}>
+          <div className="action-btns" style= {{justifyContent: "flex-end"}} >
             <RightCircleTwoTone twoToneColor="#22120A" onClick={() => handleScroll(ITEM_WIDTH)} />
           </div>
-        </Col>
+        </Col> */}
       </Row>
     </div>
   );

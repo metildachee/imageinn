@@ -48,7 +48,7 @@ const ImageCard = ({
         body: JSON.stringify({ clicked_items: [id] }),
       });
       const responseData = await response.json();
-      console.log(`send click ${id, userID}: API response:`, responseData);
+      console.log(`send click ${(id, userID)}: API response:`, responseData);
     } catch (error) {
       console.error("Error calling train_model API:", error);
     }
@@ -144,7 +144,7 @@ const ImageCard = ({
           textAlign: "left",
           marginLeft: "25px",
           position: "absolute",
-          bottom: 40, // Adjust as needed
+          bottom: 33, // Adjust as needed
           left: 0,
           right: 0,
         }}
@@ -159,7 +159,7 @@ const ImageCard = ({
           textAlign: "left",
           marginLeft: "25px",
           position: "absolute",
-          bottom: 25, // Adjust as needed
+          bottom: 20, // Adjust as needed
           left: 0,
           right: 0,
           fontStyle: "italic",
@@ -172,7 +172,7 @@ const ImageCard = ({
         style={{
           position: "absolute",
           fontFamily: "cormorant-garamond-regular",
-          top: 5,
+          top: 20,
           right: 5,
           backgroundColor: "rgba(0, 0, 0, 0.5)",
           color: "white",
@@ -180,7 +180,7 @@ const ImageCard = ({
           borderRadius: "3px",
         }}
       >
-        Score: {score}
+        ❤️ {score}
       </span>
 
       <Modal
@@ -224,14 +224,30 @@ const ImageCard = ({
                 />
               </div>
             </Col>
-            <Col span={8}>
+            <Col span={1}>
               <Space align="center" style={{ padding: "10" }}>
                 <Row align={"center"} style={{ backgroundColor: "" }}>
-                  <Title text={imageCaption} style={{ marginTop: "30px" }} />
+                  <div style={{ position: "relative" }}>
+                    <Title text={imageCaption} style={{ marginTop: "30px" }} />
+                    <span
+                      style={{
+                        position: "absolute",
+                        bottom: -20,
+                        left: 20,
+                        padding: "5px",
+                        fontFamily: "Garamond",
+                        color: "#22120A",
+                        fontSize: "20px",
+                        fontStyle: "italic"
+                      }}
+                    >
+                      {categoryNames.join(", ")}
+                    </span>
+                  </div>
                 </Row>
               </Space>
             </Col>
-            <Col span={8}>
+            <Col span={10}>
               <Space align="center" style={{ padding: "10" }}>
                 <Row align={"center"}>
                   <HorizontalScroll data={images} />

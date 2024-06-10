@@ -310,6 +310,38 @@ func (s *SearchClient) SearchTextWithFuzzy(ctx context.Context, query string, is
 	return s.doSearch(ctx, esQuery)
 }
 
+func (s *SearchClient) SearchTextWithAnd(ctx context.Context, query string, excludes []string) ([]DocumentStructure, int64, error) {
+	esQuery := map[string]interface{}{
+		"_source": map[string]interface{}{
+			"excludes": []string{"embedding"},
+		},
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				"must": []map[string]interface{}{
+					{
+						"match": map[string]interface{}{
+							"title": query,
+						},
+					},
+					{
+						"match": map[string]interface{}{
+							"category_names": query,
+						},
+					},
+				},
+				"must_not": []map[string]interface{}{
+					{
+						"terms": map[string]interface{}{
+							"title": excludes,
+						},
+					},
+				},
+			},
+		},
+	}
+	return s.doSearch(ctx, esQuery)
+}
+
 func (s *SearchClient) SearchTextNoFuzzy(ctx context.Context, query string, isAnd bool, excludes []string) ([]DocumentStructure, int64, error) {
 	logic := "should"
 	if isAnd {
