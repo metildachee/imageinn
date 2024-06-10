@@ -352,6 +352,45 @@ func (s *SearchClient) SearchTextNoFuzzy(ctx context.Context, query string, isAn
 	return s.doSearch(ctx, esQuery)
 }
 
+func (s *SearchClient) searchByID(ctx context.Context, id string) ([]DocumentStructure, int64, error) {
+	esQuery := map[string]interface{}{
+		"_source": map[string]interface{}{
+			"excludes": []string{"img"},
+		},
+		"query": map[string]interface{}{
+			"ids": map[string]interface{}{
+				"values": []string{id},
+			},
+		},
+	}
+
+	return s.doSearch(ctx, esQuery)
+}
+
+func (s *SearchClient) SearchByIDs(ctx context.Context, ids []string) ([]DocumentStructure, int64, error) {
+	esQuery := map[string]interface{}{
+		"_source": map[string]interface{}{
+			"excludes": []string{"embedding"},
+		},
+		"query": map[string]interface{}{
+			"ids": map[string]interface{}{
+				"values": ids,
+			},
+		},
+	}
+
+	return s.doSearch(ctx, esQuery)
+}
+
+func (s *SearchClient) SearchSimilarByID(ctx context.Context, id string) ([]DocumentStructure, int64, error) {
+	docs, _, err := s.searchByID(ctx, id)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return s.doKNN(ctx, docs[0].Embedding)
+}
+
 func (s *SearchClient) doKNN(ctx context.Context, target []float64) ([]DocumentStructure, int64, error) {
 	knnQuery := map[string]interface{}{
 		"knn": map[string]interface{}{

@@ -32,6 +32,28 @@ type SearchRequestImage struct {
 	Query string `json:"query"`
 }
 
+type SearchRequestID struct {
+	ID string `json:"id"`
+}
+
+type SearchRequestIDs struct {
+	IDs []string `json:"ids"`
+}
+
+func (r *SearchRequestID) GetID() string {
+	if r == nil {
+		return ""
+	}
+	return r.ID
+}
+
+func (r *SearchRequestIDs) GetIDs() []string {
+	if r == nil {
+		return []string{}
+	}
+	return r.IDs
+}
+
 func (r *SearchRequestImage) GetQuery() string {
 	if r == nil {
 		return ""
@@ -98,6 +120,33 @@ func NewWebHandler(searcher *es.SearchClient, memcache *memcache.Memcache) *WebH
 	return &WebHandler{searcher: searcher, memcache: memcache}
 }
 
+func validateAndProcessIDRequest(ctx context.Context, r *http.Request) (*SearchRequestID, error) {
+	queryParameters := r.URL.Query()
+	id := queryParameters.Get("id")
+
+	searchRequest := &SearchRequestID{
+		ID: id,
+	}
+
+	return searchRequest, nil
+}
+
+func validateAndProcessIDsRequest(ctx context.Context, r *http.Request) (*SearchRequestIDs, error) {
+	queryParameters := r.URL.Query()
+	idInputs := queryParameters.Get("ids")
+
+	excludeInputsTrimmed := strings.Trim(idInputs, "")
+	var ids []string
+	if excludeInputsTrimmed != "" {
+		ids = strings.Split(excludeInputsTrimmed, ",")
+	}
+	searchRequest := &SearchRequestIDs{
+		IDs: ids,
+	}
+
+	return searchRequest, nil
+}
+
 func validateAndProcessImgRequest(ctx context.Context, r *http.Request) (*SearchRequestImage, error) {
 	queryParameters := r.URL.Query()
 	query := queryParameters.Get("q")
@@ -129,7 +178,7 @@ func validateAndProcessRequest(ctx context.Context, r *http.Request) (*SearchReq
 	excludeInputsTrimmed := strings.Trim(excludeInputs, "")
 	var excludes []string
 	if excludeInputsTrimmed != "" {
-		excludes = strings.Split(excludeInputsTrimmed, " ")
+		excludes = strings.Split(excludeInputsTrimmed, ",")
 	}
 
 	searchRequest := &SearchRequestText{
@@ -143,6 +192,68 @@ func validateAndProcessRequest(ctx context.Context, r *http.Request) (*SearchReq
 	}
 
 	return searchRequest, nil
+}
+
+func (h *WebHandler) IDHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+
+	searchReq, err := validateAndProcessIDRequest(ctx, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	var (
+		searchResults []es.DocumentStructure
+		count         int64
+	)
+
+	searchResults = make([]es.DocumentStructure, 0)
+	searchResults, count, err = h.searcher.SearchSimilarByID(ctx, searchReq.GetID())
+	searchResp := &SearchResponse{
+		Images:     searchResults,
+		TotalCount: count,
+	}
+
+	jsonResponse, err := json.Marshal(searchResp)
+	if err != nil {
+		http.Error(w, "failed to serialize search results", http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("img request", searchReq, "response", searchResp.TotalCount)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
+}
+
+func (h *WebHandler) IDsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+
+	searchReq, err := validateAndProcessIDsRequest(ctx, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	var (
+		searchResults []es.DocumentStructure
+		count         int64
+	)
+
+	searchResults = make([]es.DocumentStructure, 0)
+	searchResults, count, err = h.searcher.SearchByIDs(ctx, searchReq.GetIDs())
+	searchResp := &SearchResponse{
+		Images:     searchResults,
+		TotalCount: count,
+	}
+
+	jsonResponse, err := json.Marshal(searchResp)
+	if err != nil {
+		http.Error(w, "failed to serialize search results", http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("img request", searchReq, "response", searchResp.TotalCount)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
 }
 
 func (h *WebHandler) ImageHandler(w http.ResponseWriter, r *http.Request) {

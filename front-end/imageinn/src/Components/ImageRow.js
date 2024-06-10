@@ -2,7 +2,7 @@ import React from "react";
 import ImageCard from "./ImageCard";
 import Layout from "./Layout/Layout";
 import GalleryDiv from "./Layout/GalleryDiv";
-import { Space } from "antd";
+
 
 const decodeBase64 = (base64) => {
   try {
@@ -20,13 +20,15 @@ const decodeBase64 = (base64) => {
   }
 };
 
-const ImageRow = ({ images }) => {
+const ImageRow = ({ userID, images }) => {
   return (
     <Layout>
         <GalleryDiv>
           {images.map((img, index) => (
             <ImageCard
+            userID={userID}
               key={index}
+              id={img.id}
               altText={img.caption}
               imgSrc={decodeBase64(img.img)}
               imageCaption={img.title}

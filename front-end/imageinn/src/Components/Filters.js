@@ -9,6 +9,7 @@ const RectangleComponent = ({
   updateIsAnd,
   updateExcludes,
   updateImage,
+  updatePersonalise
 }) => {
   const [useText, setUseText] = useState(true);
   const [imgDisabled, setImgDisabled] = useState(false);
@@ -17,6 +18,7 @@ const RectangleComponent = ({
   const [isOr, setIsOr] = useState(true);
   const [fuzzy, setFuzzy] = useState(false);
   const [isImg, setImg] = useState(false);
+  const [isPersonalise, setPersonalise] = useState(false);
 
   useEffect(() => {
     updateFuzzy(fuzzy);
@@ -38,6 +40,7 @@ const RectangleComponent = ({
           maxWidth: "100%",
           marginLeft: "10px",
           position: "relative", // Add position relative for positioning the icon
+          backgroundColor: "white"
         }}
       >
         {/* Icon for aligning right */}
@@ -55,7 +58,7 @@ const RectangleComponent = ({
           layout="horizontal"
           form={form}
           disabled={imgDisabled}
-          style={{ width: "400px" }}
+          style={{ width: "500px" }}
         >
           <Row>
             <Col span={6}>
@@ -115,6 +118,17 @@ const RectangleComponent = ({
                     console.log(e.target.checked)
                     updateImage(e.target.checked);
                     setImg(e.target.checked)
+                  }}
+                />
+              </Form.Item>
+              <Form.Item label="" style={{ margin: 0 }}>
+                <CheckboxWithLabel
+                  label={"PERSONALISE"}
+                  onChange={(e) => {
+                    // setImgDisabled(e.target.checked);
+                    // setUseText(!e.target.checked);
+                    updatePersonalise(e.target.checked);
+                    setPersonalise(e.target.checked)
                   }}
                 />
               </Form.Item>
