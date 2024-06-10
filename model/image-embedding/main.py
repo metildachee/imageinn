@@ -146,7 +146,7 @@ def train_model(user_item_matrix, epochs=50):
             test_loss = total_loss / total_samples
             print(f"Epoch {epoch+1}, Test Loss: {test_loss:.4f}")
 
-# train_model(user_item_matrix)
+train_model(user_item_matrix)
 
 # content based
 def get_recommendations(title, cosine_sim=cosine_sim):
