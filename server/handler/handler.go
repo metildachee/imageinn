@@ -305,8 +305,13 @@ func (h *WebHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 		searchResults, count, err = h.searcher.SearchTextWithFuzzy(ctx, searchReq.GetQuery(), searchReq.GetTextOptions().GetIsAnd(),
 			searchReq.GetTextOptions().GetExcludes())
 	} else {
-		searchResults, count, err = h.searcher.SearchTextNoFuzzy(ctx, searchReq.GetQuery(), searchReq.GetTextOptions().GetIsAnd(),
-			searchReq.GetTextOptions().GetExcludes())
+		if searchReq.GetTextOptions().GetIsAnd() {
+			searchResults, count, err = h.searcher.SearchTextWithAnd(ctx, searchReq.GetQuery(),
+				searchReq.GetTextOptions().GetExcludes())
+		} else {
+			searchResults, count, err = h.searcher.SearchTextNoFuzzy(ctx, searchReq.GetQuery(), searchReq.GetTextOptions().GetIsAnd(),
+				searchReq.GetTextOptions().GetExcludes())
+		}
 	}
 
 	searchResp := &SearchResponse{

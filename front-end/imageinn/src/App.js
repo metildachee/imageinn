@@ -40,8 +40,10 @@ function App() {
   const [excludes, setExcludes] = useState([]);
   const [searchResultCount, setSearchResultCount] = useState(0); // State to store the number of search results
   const [isImg, setIsImg] = useState(false);
-  const [userID, _] = useState(Math.floor(Math.random() * 1000000));
+  const [userID, _] = useState(611);
   const [isPersonalise, setPersonalise] = useState(false);
+  const [isNLP, setNLP] = useState(false);
+  const [keywords, setKeywords] = useState([]);
 
   const callAPI = async (query, isFuzzy, isAnd, excludes) => {
     console.log("submit input:", query, isFuzzy, isAnd, excludes);
@@ -58,7 +60,7 @@ function App() {
       const responseData = await response.json();
       console.log("response from API:", responseData);
       setImages(responseData.images); // Update state with the response data
-      setSearchResultCount(responseData.images.length); // Update the search result count
+      setSearchResultCount(responseData.total_count); // Update the search result count
     } catch (error) {
       console.error("Error during API call:", error);
     }
@@ -79,7 +81,7 @@ function App() {
       const responseData = await response.json();
       console.log("response from img API:", responseData);
       setImages(responseData.images); // Update state with the response data
-      setSearchResultCount(responseData.images.length); // Update the search result count
+      setSearchResultCount(responseData.total_count); // Update the search result count
     } catch (error) {
       console.error("Error during API call:", error);
     }
@@ -99,7 +101,7 @@ function App() {
       const responseData = await response.json();
       console.log("response from batch ids API:", responseData);
       setImages(responseData.images); // Update state with the response data
-      setSearchResultCount(responseData.images.length); // Update the search result count
+      setSearchResultCount(responseData.total_count); // Update the search result count
     } catch (error) {
       console.error("Error during API call:", error);
     }
@@ -126,6 +128,28 @@ function App() {
     }
   };
 
+  const getNLPKeywords = async (query) => {
+    const url = `http://localhost:5000/get_nlp_keywords/${query}`;
+    console.log(url);
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const responseData = await response.json();
+      console.log("response from nlp API:", responseData);
+      // setImages(responseData.images); // Update state with the response data
+      // setSearchResultCount(responseData.images.length); // Update the search result count
+      setKeywords(responseData.keywords);
+      return responseData.keywords;
+    } catch (error) {
+      console.error("Error during API call:", error);
+    }
+  };
+
   const onQuerySearch = (value) => {
     console.log("query input", value);
     setQuery(value);
@@ -144,6 +168,11 @@ function App() {
           batchGetAPI(ids.slice(1, 5));
         }
       });
+    } else if (isNLP && query) {
+      console.log("nlp query");
+      getNLPKeywords(query).then((keywords) => {
+        callAPI(keywords, isFuzzy, isAnd, excludes);
+      });
     } else if (
       query !== "" ||
       isFuzzy ||
@@ -152,7 +181,7 @@ function App() {
     ) {
       callAPI(query, isFuzzy, isAnd, excludes);
     }
-  }, [query, isFuzzy, isAnd, excludes, isImg, isPersonalise]);
+  }, [query, isFuzzy, isAnd, excludes, isImg, isPersonalise, isNLP]);
 
   return (
     <Flex gap="middle" wrap>
@@ -161,19 +190,28 @@ function App() {
           <Row>
             <Col span={4}></Col>
             <Col span={16}>
-              <Space align="center">
+              <div style={{ position: "relative" }}>
                 <SearchBar style={{ margin: "0px" }} onSearch={onQuerySearch} />
-              </Space>
+                <span
+                  style={{
+                    position: "absolute",
+                    bottom: -35,
+                    left: 0,
+                    color: "#8a8fea",
+                    fontFamily: "Cormorant Garamond, serif",
+                    fontSize: "18px",
+                    margin: "0px",
+                    padding: "5px",
+                  }}
+                >
+                  {!(isNLP && keywords && keywords.length > 0)
+                    ? `${searchResultCount} posters`
+                    : `Searching on ${keywords}`}
+                </span>
+              </div>
             </Col>
             <Col span={4}></Col>
           </Row>
-          {/* <Row>
-            <Col span={8}></Col>
-            <Col span={8}>
-              
-            </Col>
-            <Col span={8}></Col>
-          </Row> */}
         </Header>
         <Content style={contentStyle}>
           <Space align="center">
@@ -191,6 +229,7 @@ function App() {
             updateExcludes={setExcludes}
             updateImage={setIsImg}
             updatePersonalise={setPersonalise}
+            updateNLP={setNLP}
           />
         </Footer>
       </Layout>

@@ -9,7 +9,8 @@ const RectangleComponent = ({
   updateIsAnd,
   updateExcludes,
   updateImage,
-  updatePersonalise
+  updatePersonalise,
+  updateNLP,
 }) => {
   const [useText, setUseText] = useState(true);
   const [imgDisabled, setImgDisabled] = useState(false);
@@ -19,12 +20,13 @@ const RectangleComponent = ({
   const [fuzzy, setFuzzy] = useState(false);
   const [isImg, setImg] = useState(false);
   const [isPersonalise, setPersonalise] = useState(false);
+  const [isNLP, setNLP] = useState(false);
 
   useEffect(() => {
     updateFuzzy(fuzzy);
     updateIsAnd(!isOr);
     updateExcludes(tokens);
-    updateImage(isImg)
+    updateImage(isImg);
   }, [form.getFieldsValue()]);
 
   return (
@@ -32,22 +34,22 @@ const RectangleComponent = ({
       <div
         className="rectangle custom-radio"
         style={{
-          border: "1px solid #8A8FEA",
+          border: "1px solid black",
           borderRadius: "5px",
-          color: "#8A8FEA",
+          color: "#f8dce4",
           textAlign: "left",
           padding: "10px",
           maxWidth: "100%",
           marginLeft: "10px",
           position: "relative", // Add position relative for positioning the icon
-          backgroundColor: "white"
+          backgroundColor: "#FFA1BE",
         }}
       >
         {/* Icon for aligning right */}
         <div
           style={{
             position: "absolute",
-            top: "-20px",
+            top: "2px",
             right: "5px",
           }}
         >
@@ -73,15 +75,16 @@ const RectangleComponent = ({
             <Col span={10}>
               <Form.Item
                 label=""
-                style={{ margin: 0, color: "#8A8FEA" }}
+                style={{ margin: 0, color: "#FFA1BE" }}
                 className="cormorant-garamond-regular-italic"
               >
-                <Radio.Group>
+                <Radio.Group value={isOr ? "or" : "and"}>
                   <Radio
                     className="custom-radio"
                     value="and"
-                    style={{ color: "#8A8FEA" }}
+                    style={{ color: "white" }}
                     disabled={imgDisabled}
+                    defaultChecked={true}
                     onChange={(e) => {
                       console.log(e.target.value);
                       setIsOr(false);
@@ -94,7 +97,7 @@ const RectangleComponent = ({
                   <Radio
                     className="custom-radio"
                     value="or"
-                    style={{ color: "#8A8FEA" }}
+                    style={{ color: "white" }}
                     disabled={imgDisabled}
                     onChange={(e) => {
                       console.log(e.target.value);
@@ -107,6 +110,19 @@ const RectangleComponent = ({
                   </Radio>
                 </Radio.Group>
               </Form.Item>
+              <Form.Item label="" style={{ margin: 0 }}>
+                <CheckboxWithLabel
+                  label={"NATURAL LANGUAGE"}
+                  onChange={(e) => {
+                    // setImgDisabled(e.target.checked);
+                    // setUseText(!e.target.checked);
+                    console.log(e.target.checked, "nlp changed")
+                    updateNLP(e.target.checked);
+
+                    setNLP(e.target.checked);
+                  }}
+                />
+              </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item label="" style={{ margin: 0 }}>
@@ -115,20 +131,20 @@ const RectangleComponent = ({
                   onChange={(e) => {
                     // setImgDisabled(e.target.checked);
                     // setUseText(!e.target.checked);
-                    console.log(e.target.checked)
+                    console.log(e.target.checked);
                     updateImage(e.target.checked);
-                    setImg(e.target.checked)
+                    setImg(e.target.checked);
                   }}
                 />
               </Form.Item>
               <Form.Item label="" style={{ margin: 0 }}>
                 <CheckboxWithLabel
-                  label={"PERSONALISE"}
+                  label={"SIMILAR MOVIES"}
                   onChange={(e) => {
                     // setImgDisabled(e.target.checked);
                     // setUseText(!e.target.checked);
                     updatePersonalise(e.target.checked);
-                    setPersonalise(e.target.checked)
+                    setPersonalise(e.target.checked);
                   }}
                 />
               </Form.Item>
@@ -146,12 +162,12 @@ const RectangleComponent = ({
       <div
         style={{
           position: "absolute",
-          bottom: -3,
-          right: 5,
-          width: `45ch`,
-          height: `70px`,
-          borderRight: "1px solid #8A8FEA",
-          borderBottom: "1px solid #8A8FEA",
+          bottom: 10,
+          right: 490,
+          width: `58ch`,
+          height: `100px`,
+          borderRight: "1px solid black",
+          borderBottom: "1px solid black",
           borderTopColor: "#DC648F",
           borderLeftColor: "#DC648F",
           boxSizing: "border-box",

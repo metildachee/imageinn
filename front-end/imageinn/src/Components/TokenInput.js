@@ -43,8 +43,8 @@ const TokenInput = ({ onTokensChange }) => {
       <Input
         prefix="EXCLUDE"
         style={{
-          color: "#8A8FEA",
-          border: "1px solid #8A8FEA",
+          color: "#white",
+          border: "1px solid #f8dce4",
           backgroundColor: "transparent",
         //   marginTop: 24, // Add padding to the top
         }}

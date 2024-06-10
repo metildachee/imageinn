@@ -204,64 +204,70 @@ body {
 /* CheckboxWithLabel.css */
 .custom-checkbox .ant-checkbox-inner {
   background-color: transparent !important;
-  border-color: #8a8fea !important;
+  border-color: #f8dce4 !important;
 }
 
 .custom-checkbox .ant-checkbox {
   background-color: transparent !important;
-  border-color: grey !important;
+  border-color: #f8dce4 !important;
 }
 
 .custom-checkbox .ant-checkbox-inner::after {
   /* content: 'X'; */
   content: "";
-  width: 12px; /* Set the width of the icon */
-  height: 12px; /* Set the height of the icon */
+  width: 10px; /* Set the width of the icon */
+  height: 10px; /* Set the height of the icon */
   /* background-image: url("../public/icons/png/letter-x.png"); */
-  color: #8a8fea;
+  color: #f8dce4;
   background-size: cover;
-  background-color: #8a8fea;
+  background-color:#f8dce4;
   /* font-weight: bold; */
   position: absolute;
   top: 53%;
-  left: 2px; /* Move the X a little to the left */
+  left: 3px; /* Move the X a little to the left */
   transform: translateY(-50%);
   font-size: 14px;
   padding: 0px;
-  border-color: #8a8fea !important; /* Change the border color when checked */
+  border-color: #f8dce4 !important; /* Change the border color when checked */
 }
 
 .custom-checkbox .ant-checkbox-checked .ant-checkbox-inner {
   background-color: transparent !important; /* Change the background color when checked */
-  border-color: #8a8fea !important;
+  border-color: #f8dce4 !important;
 }
 
 .custom-checkbox .ant-checkbox-checked .ant-checkbox {
   background-color: transparent !important;
-  border-color: #8a8fea !important; /* Change the border color when checked */
+  border-color: #f8dce4 !important; /* Change the border color when checked */
 }
 
 /* CustomRadio.css */
 
 .custom-radio .ant-radio-wrapper .ant-radio-inner {
+  font-family: 'Cormorant Garamond' !important;
   background-color: transparent;
-  border-color: #8a8fea;
+  border-color: #f8dce4;
+}
+.ant-radio-wrapper span.ant-radio+*  {
+  font-family: 'Cormorant Garamond' !important;
+  font-weight: 700;
+  font-style: italic;
 }
 
 .custom-radio .ant-radio-inner .ant-radio-checked .ant-radio-checked::after {
-  background-color: #8a8fea !important;
-  border-color: #8a8fea !important;
-  border: 1px solid #8a8fea !important;
+  background-color: #f8dce4 !important;
+  border-color: #f8dce4 !important;
+  border: 1px solid #f8dce4 !important;
 }
 
 .custom-radio .ant-radio-checked .ant-radio-inner .ant-checkbox-wrapper {
-  background-color: #8a8fea !important;
-  border-color: #8a8fea !important;
-  border: 1px solid #8a8fea !important;
+  background-color: #f8dce4 !important;
+  border-color: #f8dce4 !important;
+  border: 1px solid #f8dce4 !important;
 }
 
 .custom-radio .ant-radio-inner::after {
-  background-color: #8a8fea !important; /* Fill the radio button with black */
+  background-color: #f8dce4 !important; /* Fill the radio button with black */
 }
 
 /* model */
@@ -281,6 +287,17 @@ body {
   outline: none;
 }
 
+/* .custom-input-field::focus-within {
+  border-color: #8a8fea;
+} */
+
+.ant-input-outlined:focus-within {
+  border-color: #8a8fea !important;
+}
+.ant-input-affix-wrapper >input.ant-input  {
+  font-family: 'Roboto' !important; 
+}
+
 .custom-icon {
   position: absolute;
   top: 50%;
@@ -298,6 +315,10 @@ body {
 .ant-form-item-control-input {
   padding: 0px;
   min-height: 0px !important;
+}
+
+.ant-input-affix-wrapper .ant-input-prefix {
+  color: white !important;
 }
 
 .input-with-placeholder::placeholder {
