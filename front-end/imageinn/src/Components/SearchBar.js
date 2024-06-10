@@ -41,7 +41,7 @@ const SearchBar = ({ onSearch }) => {
   const [inputValue, setInputValue] = useState("");
 
   return (
-    <div className="custom-input-container roboto-medium-italic">
+    <div className="custom-input-container roboto-medium-italic" style={{ fontStyle: "Roboto"}}>
       <Input
         className="custom-input-field"
         placeholder="START SEARCHING!"
