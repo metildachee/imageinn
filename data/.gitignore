@@ -6,3 +6,4 @@ bulk
 .idea
 .xml
 *.h5
+*.csv
