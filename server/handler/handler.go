@@ -11,23 +11,6 @@ import (
 	"strings"
 )
 
-type SearchRequestLogic struct {
-	And bool `json:"and"`
-	Or  bool `json:"or"`
-}
-
-type SearchRequestTextOptions struct {
-	IsNLP    bool     `json:"is_nlp"`
-	IsFuzzy  bool     `json:"is_fuzzy"`
-	Excludes []string `json:"excludes"`
-	IsAnd    bool     `json:"is_and"`
-}
-
-type SearchRequestText struct {
-	Query       string                   `json:"query"`
-	TextOptions SearchRequestTextOptions `json:"text-options"`
-}
-
 type SearchRequestImage struct {
 	Query string `json:"query"`
 }
@@ -59,6 +42,23 @@ func (r *SearchRequestImage) GetQuery() string {
 		return ""
 	}
 	return r.Query
+}
+
+type SearchRequestLogic struct {
+	And bool `json:"and"`
+	Or  bool `json:"or"`
+}
+
+type SearchRequestTextOptions struct {
+	IsNLP    bool     `json:"is_nlp"`
+	IsFuzzy  bool     `json:"is_fuzzy"`
+	Excludes []string `json:"excludes"`
+	IsAnd    bool     `json:"is_and"`
+}
+
+type SearchRequestText struct {
+	Query       string                   `json:"query"`
+	TextOptions SearchRequestTextOptions `json:"text-options"`
 }
 
 func (rt *SearchRequestText) GetQuery() string {
